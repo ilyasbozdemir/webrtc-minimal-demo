@@ -27,12 +27,25 @@ function CallPageContent() {
   const searchParams = useSearchParams()
 
   const roomId = params.roomId as string
-  const audioDevice = searchParams.get('audioDevice') || ''
-  const videoDevice = searchParams.get('videoDevice') || ''
-  const quality = (searchParams.get('quality') as VideoQuality) || '720p'
-  const isCreating = searchParams.get('create') === 'true'
-
   const [userId] = useState(() => `user_${Math.random().toString(36).substring(2, 11)}`)
+  const [isCreating, setIsCreating] = useState(false)
+  const [devices, setDevices] = useState({ audio: '', video: '', quality: '720p' as VideoQuality })
+
+  // Modern URL: Parametreleri oku ve URL'yi temizle
+  useEffect(() => {
+    const create = searchParams.get('create') === 'true'
+    const audio = searchParams.get('audioDevice') || ''
+    const video = searchParams.get('videoDevice') || ''
+    const q = (searchParams.get('quality') as VideoQuality) || '720p'
+
+    setIsCreating(create)
+    setDevices({ audio, video, quality: q })
+
+    // URL'deki teknik parametreleri gizle (daha modern görünüm)
+    if (searchParams.has('create') || searchParams.has('audioDevice')) {
+      router.replace(`/call/${roomId}`, { scroll: false })
+    }
+  }, [searchParams, roomId, router])
 
   const [localStream, setLocalStream] = useState<MediaStream | null>(null)
   const [remoteStream, setRemoteStream] = useState<MediaStream | null>(null)
@@ -66,11 +79,12 @@ function CallPageContent() {
 
   useEffect(() => {
     const initializeStream = async () => {
+      // Sadece cihazlar set edildikten sonra (ya da varsayılanla) başlat
       try {
         const stream = await MediaDeviceManager.getUserMedia(
-          audioDevice,
-          videoDevice,
-          quality
+          devices.audio,
+          devices.video,
+          devices.quality
         )
         setLocalStream(stream)
       } catch (err) {
@@ -78,14 +92,16 @@ function CallPageContent() {
       }
     }
 
-    initializeStream()
+    if (devices.audio !== undefined) {
+      initializeStream()
+    }
 
     return () => {
       if (localStream) {
         localStream.getTracks().forEach((track) => track.stop())
       }
     }
-  }, [])
+  }, [devices])
 
   useEffect(() => {
     if (!localStream) return
