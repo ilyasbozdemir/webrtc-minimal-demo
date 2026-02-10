@@ -12,7 +12,8 @@ import { PermissionRequest } from '@/components/permission-request'
 import { MediaDeviceManager } from '@/lib/webrtc/media-devices'
 import { VideoQuality, VIDEO_QUALITY_PRESETS } from '@/lib/webrtc/config'
 import { formatRoomId } from '@/lib/utils/room'
-import { Video, Settings, AlertCircle, ArrowRight, ArrowLeft, Share2 } from 'lucide-react'
+import { Video, Settings, AlertCircle, ArrowRight, ArrowLeft, Share2, Mic, MicOff } from 'lucide-react'
+import { useAudioLevel } from '@/hooks/use-audio-level'
 
 function SetupPageContent() {
   const router = useRouter()
@@ -32,6 +33,7 @@ function SetupPageContent() {
   const [isLoading, setIsLoading] = useState(false)
   const [permissionsGranted, setPermissionsGranted] = useState(false)
   const [isCopied, setIsCopied] = useState(false)
+  const audioLevel = useAudioLevel(stream)
 
   // Check WebRTC support
   useEffect(() => {
@@ -239,6 +241,24 @@ function SetupPageContent() {
                     </div>
                   </div>
                 )}
+
+                {/* Audio Level Visualizer Overlay */}
+                {stream && (
+                  <div className="absolute bottom-4 left-4 right-4 flex items-center gap-3 rounded-xl bg-black/40 p-2 backdrop-blur-md">
+                    <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary/20 text-primary">
+                      {audioLevel > 5 ? <Mic className="h-4 w-4" /> : <MicOff className="h-4 w-4 text-muted-foreground" />}
+                    </div>
+                    <div className="flex-1 space-y-1">
+                      <div className="text-[10px] font-medium text-white/70 uppercase tracking-wider">Mikrofon Testi</div>
+                      <div className="h-1.5 w-full overflow-hidden rounded-full bg-white/10">
+                        <div
+                          className="h-full bg-primary transition-all duration-75"
+                          style={{ width: `${Math.min(100, (audioLevel / 128) * 100)}%` }}
+                        />
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
 
               {error && (
@@ -307,15 +327,16 @@ function SetupPageContent() {
               </CardContent>
             </Card>
 
-            <Card className="border-primary/50 bg-primary/5">
-              <CardHeader>
-                <CardTitle className="text-lg">
-                  {isCreating ? 'Oda Oluşturuluyor' : 'Odaya Katılıyorsunuz'}
+            <Card className="border-primary/50 bg-primary/5 shadow-inner">
+              <CardHeader className="pb-4">
+                <CardTitle className="text-lg flex items-center gap-2">
+                  <div className="h-2 w-2 animate-pulse rounded-full bg-primary" />
+                  {isCreating ? 'Oda Hazır' : 'Bağlanmaya Hazırsınız'}
                 </CardTitle>
-                <CardDescription>
+                <CardDescription className="text-xs">
                   {isCreating
-                    ? 'Oda ID\'nizi karşı tarafa gönderin ve bağlantı kurmasını bekleyin.'
-                    : 'Oda sahibinin bağlantı kurmasını bekleyin.'}
+                    ? 'Oda linkini paylaşın ve butona tıklayarak görüşmeyi başlatın.'
+                    : 'Butona tıklayarak görüşmeye hemen katılabilirsiniz.'}
                 </CardDescription>
               </CardHeader>
               <CardContent>
