@@ -19,7 +19,7 @@ import { ConnectionState, CallState } from '@/lib/types/webrtc'
 import { formatRoomId } from '@/lib/utils/room'
 import { useChat } from '@/hooks/use-chat'
 import { useConnectionQuality } from '@/hooks/use-connection-quality'
-import { AlertCircle, Copy, Check, BarChart3, X, Share2 } from 'lucide-react'
+import { AlertCircle, Copy, Check, BarChart3, X, Share2, Video } from 'lucide-react'
 
 function CallPageContent() {
   const router = useRouter()
