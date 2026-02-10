@@ -407,91 +407,121 @@ function CallPageContent() {
 
   return (
     <div className="flex min-h-screen flex-col bg-background">
-      <div className="border-b bg-card">
-        <div className="container mx-auto flex items-center justify-between px-3 py-2.5 sm:px-4 sm:py-4">
-          <div className="flex items-center gap-2 sm:gap-4">
+      {/* Header - More compact and subtle */}
+      <div className="border-b bg-card/50 backdrop-blur-md">
+        <div className="container mx-auto flex items-center justify-between px-4 py-2 sm:py-3">
+          <div className="flex items-center gap-3">
+            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary/10 text-primary">
+              <Video className="h-4 w-4" />
+            </div>
             <div>
-              <h1 className="text-sm font-semibold sm:text-lg">Video Görüşme</h1>
-              <div className="flex items-center gap-2">
-                <button
-                  onClick={handleCopyRoomId}
-                  className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors sm:text-sm"
-                >
-                  <span className="font-mono">{formatRoomId(roomId)}</span>
-                  {copied ? (
-                    <Check className="h-3 w-3 text-success" />
-                  ) : (
-                    <Copy className="h-3 w-3" />
-                  )}
-                </button>
-              </div>
+              <h1 className="text-sm font-medium leading-none sm:text-base">
+                {connectionState === 'connected' ? 'Görüşme Yayında' : 'Bağlantı Kuruluyor'}
+              </h1>
+              <button
+                onClick={handleCopyRoomId}
+                className="mt-1 flex items-center gap-1 text-[10px] text-muted-foreground hover:text-foreground transition-colors sm:text-xs"
+              >
+                <span className="font-mono">{formatRoomId(roomId)}</span>
+                {copied ? (
+                  <Check className="h-2.5 w-2.5 text-success" />
+                ) : (
+                  <Copy className="h-2.5 w-2.5" />
+                )}
+              </button>
             </div>
           </div>
 
           <div className="flex items-center gap-2">
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => setShowQualityStats(!showQualityStats)}
-              className="hidden lg:flex"
-            >
-              <BarChart3 className="mr-2 h-4 w-4" />
-              İstatistikler
-            </Button>
+            <div className="hidden items-center gap-1 mr-2 lg:flex">
+              <ConnectionStatusBadge state={connectionState} />
+            </div>
             <Button
               variant="outline"
               size="sm"
               onClick={handleShare}
-              className="flex items-center gap-2"
+              className="h-8 gap-2 px-3 text-xs"
             >
-              <Share2 className="h-4 w-4" />
+              <Share2 className="h-3.5 w-3.5" />
               <span className="hidden sm:inline">Paylaş</span>
             </Button>
-            <ConnectionStatusBadge state={connectionState} />
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setShowQualityStats(!showQualityStats)}
+              className="hidden h-8 w-8 p-0 lg:flex"
+            >
+              <BarChart3 className="h-4 w-4" />
+            </Button>
           </div>
         </div>
       </div>
 
       <div className="relative flex flex-1 flex-col overflow-hidden lg:flex-row">
         {/* Video Area */}
-        <div className="flex flex-1 flex-col p-2 sm:p-4">
+        <div className="relative flex flex-1 flex-col p-2 sm:p-6 bg-slate-50/50 dark:bg-slate-950/20">
           {error && (
-            <Alert variant="destructive" className="mb-2 sm:mb-4">
+            <Alert variant="destructive" className="mx-auto mb-4 max-w-2xl animate-in fade-in slide-in-from-top-4">
               <AlertCircle className="h-4 w-4" />
               <AlertTitle>Hata</AlertTitle>
               <AlertDescription>{error}</AlertDescription>
             </Alert>
           )}
 
-          {connectionState === 'connecting' && !remoteStream && (
-            <Alert className="mb-2 sm:mb-4">
-              <AlertCircle className="h-4 w-4" />
-              <AlertTitle>Bağlantı bekleniyor</AlertTitle>
-              <AlertDescription>
-                {isCreating
-                  ? 'Oda ID\'nizi paylaşın ve karşı tarafın bağlanmasını bekleyin.'
-                  : 'Oda sahibine bağlanılıyor...'}
-              </AlertDescription>
-            </Alert>
+          {connectionState !== 'connected' && !remoteStream && (
+            <div className="absolute inset-0 z-20 flex items-center justify-center bg-background/60 backdrop-blur-sm">
+              <div className="text-center p-6 bg-card border rounded-2xl shadow-xl max-w-sm animate-in zoom-in-95">
+                <div className="mb-4 flex justify-center">
+                  <div className="relative h-12 w-12">
+                    <div className="absolute inset-0 animate-ping rounded-full bg-primary/20" />
+                    <div className="relative flex h-12 w-12 items-center justify-center rounded-full bg-primary/10 text-primary">
+                      <Video className="h-6 w-6" />
+                    </div>
+                  </div>
+                </div>
+                <h3 className="mb-2 font-semibold">
+                  {isCreating ? 'Oda Hazırlanıyor' : 'Bağlantı Bekleniyor'}
+                </h3>
+                <p className="text-sm text-muted-foreground">
+                  {isCreating
+                    ? 'Oda ID\'nizi paylaşın ve katılımcının gelmesini bekleyin.'
+                    : 'Sunucuya bağlanılıyor, lütfen bekleyin...'}
+                </p>
+                <div className="mt-6">
+                  <Button variant="outline" size="sm" onClick={handleShare} className="gap-2">
+                    <Share2 className="h-4 w-4" />
+                    Linki Paylaş
+                  </Button>
+                </div>
+              </div>
+            </div>
           )}
 
           {showQualityStats && connectionState === 'connected' && (
-            <div className="mb-2 hidden sm:mb-4 lg:block">
+            <div className="mx-auto mb-4 w-full max-w-5xl">
               <ConnectionQualityIndicator quality={connectionQuality} />
             </div>
           )}
 
-          <div className="relative flex flex-1 flex-col gap-2 sm:gap-4">
-            {/* Remote Video - Takes full space on mobile */}
-            <div className="relative flex-1 overflow-hidden rounded-lg">
+          <div className="relative mx-auto flex w-full max-w-6xl flex-1 flex-col items-center justify-center gap-4">
+            {/* Remote Video Container - Restricted size on desktop */}
+            <div className="relative aspect-video w-full max-h-[75vh] min-h-[300px] overflow-hidden rounded-2xl border bg-black shadow-2xl transition-all duration-500">
               <VideoPlayer
                 stream={remoteStream}
                 userName={callState.remoteUserId || undefined}
-                className="h-full w-full"
+                className="h-full w-full object-cover"
               />
+
+              {/* Floating Status Bar inside Video */}
+              {connectionState === 'connected' && (
+                <div className="absolute left-4 top-4 z-10 hidden sm:block">
+                  <ConnectionStatusBadge state={connectionState} />
+                </div>
+              )}
             </div>
 
-            <div className="absolute right-2 top-2 z-10 w-24 overflow-hidden rounded-lg shadow-lg sm:right-4 sm:top-4 sm:w-32 lg:w-48">
+            {/* Local Pip (Picture in Picture) - More stylish */}
+            <div className="absolute bottom-4 right-4 z-30 w-28 overflow-hidden rounded-xl border-2 border-background shadow-2xl transition-all duration-300 hover:scale-105 sm:bottom-6 sm:right-6 sm:w-40 lg:w-56">
               <VideoPlayer
                 stream={localStream}
                 muted
@@ -502,24 +532,20 @@ function CallPageContent() {
             </div>
           </div>
 
-          <div className="mt-2 sm:mt-4">
-            <CallControls
-              isAudioEnabled={callState.isAudioEnabled}
-              isVideoEnabled={callState.isVideoEnabled}
-              onToggleAudio={handleToggleAudio}
-              onToggleVideo={handleToggleVideo}
-              onEndCall={handleEndCall}
-              onReconnect={connectionState === 'failed' ? handleReconnect : undefined}
-              onToggleChat={() => setIsChatOpen(!isChatOpen)}
-              isChatOpen={isChatOpen}
-            />
-          </div>
-
-          {connectionState === 'connected' && (
-            <div className="mt-2 sm:mt-4 lg:hidden">
-              <ConnectionQualityIndicator quality={connectionQuality} />
+          <div className="mt-4 flex justify-center sm:mt-8">
+            <div className="rounded-2xl bg-card/80 p-2 shadow-lg backdrop-blur-md border">
+              <CallControls
+                isAudioEnabled={callState.isAudioEnabled}
+                isVideoEnabled={callState.isVideoEnabled}
+                onToggleAudio={handleToggleAudio}
+                onToggleVideo={handleToggleVideo}
+                onEndCall={handleEndCall}
+                onReconnect={connectionState === 'failed' ? handleReconnect : undefined}
+                onToggleChat={() => setIsChatOpen(!isChatOpen)}
+                isChatOpen={isChatOpen}
+              />
             </div>
-          )}
+          </div>
         </div>
 
         {isChatOpen && (

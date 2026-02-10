@@ -187,32 +187,37 @@ function SetupPageContent() {
     <div className="min-h-screen bg-background">
       <div className="container mx-auto px-4 py-8">
         {/* Header */}
-        <div className="mb-8">
+        <div className="mb-8 flex items-center justify-between">
+          <div>
+            <h1 className="text-2xl font-bold tracking-tight sm:text-3xl">Hazırlan</h1>
+            <p className="mt-1 text-sm text-muted-foreground sm:text-base">
+              Cihazlarını kontrol et ve görüşmeye bağlan.
+            </p>
+          </div>
           <Button
             variant="ghost"
+            size="sm"
             onClick={() => router.push('/')}
-            className="mb-4"
+            className="h-9 px-3"
           >
             <ArrowLeft className="mr-2 h-4 w-4" />
-            Geri
+            İptal
           </Button>
-          <h1 className="text-3xl font-bold">Cihaz Kurulumu</h1>
-          <p className="mt-2 text-muted-foreground">
-            Görüşmeye başlamadan önce kamera ve mikrofon ayarlarınızı yapın
-          </p>
         </div>
 
-        <div className="grid gap-8 lg:grid-cols-2">
+        <div className="grid gap-6 lg:grid-cols-2">
           {/* Video Preview */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Video className="h-5 w-5" />
-                Kamera Önizleme
-              </CardTitle>
-              <CardDescription>
-                Oda: <span className="font-mono font-semibold">{formatRoomId(roomId)}</span>
-              </CardDescription>
+          <Card className="overflow-hidden border-none shadow-lg outline outline-1 outline-border">
+            <CardHeader className="pb-3">
+              <div className="flex items-center justify-between">
+                <CardTitle className="text-lg flex items-center gap-2">
+                  <Video className="h-4 w-4 text-primary" />
+                  Önizleme
+                </CardTitle>
+                <div className="flex items-center gap-1 rounded-full bg-muted px-2 py-0.5 text-[10px] font-mono text-muted-foreground uppercase tracking-wider">
+                  Oda: {formatRoomId(roomId)}
+                </div>
+              </div>
             </CardHeader>
             <CardContent>
               <div className="relative aspect-video overflow-hidden rounded-lg bg-muted">
