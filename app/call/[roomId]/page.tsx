@@ -253,13 +253,24 @@ function CallPageContent() {
         }
       }
 
-      signaling.onPeerStatus((isOnline) => {
+      signaling.onPeerStatus(async (isOnline) => {
         if (!mounted) return
         setIsPeerOnline(isOnline)
 
         if (isOnline && isCreating && pc.iceConnectionState !== 'connected') {
-          console.log('Presence: Peer detected online, triggering handshake')
-          pc.onnegotiationneeded?.(new Event('negotiationneeded'))
+          console.log('Presence: Peer detected online, creating offer immediately')
+          if (makingOfferRef.current) return
+          makingOfferRef.current = true
+          try {
+            const offer = await pc.createOffer({ iceRestart: true })
+            await pc.setLocalDescription(offer)
+            signaling?.sendOffer(pc.localDescription!)
+            console.log('Presence: Offer sent successfully')
+          } catch (err) {
+            console.error('Presence: Failed to create offer:', err)
+          } finally {
+            makingOfferRef.current = false
+          }
         }
       })
 
@@ -274,19 +285,7 @@ function CallPageContent() {
         console.log('Processing message:', message.type, 'from:', message.from)
 
         try {
-          if (message.type === 'peer-joined' && isCreating && pc.iceConnectionState !== 'connected') {
-            if (makingOfferRef.current) return
-            makingOfferRef.current = true
-            console.log('Creator: Peer joined, creating offer (iceRestart: true)')
-            try {
-              const offer = await pc.createOffer({ iceRestart: true })
-              await pc.setLocalDescription(offer)
-              signaling?.sendOffer(pc.localDescription!)
-            } finally {
-              makingOfferRef.current = false
-            }
-            return
-          }
+          // peer-joined removed - now using Presence for peer detection
 
           if (message.type === 'ice-candidate') {
             if (message.candidate) {
@@ -341,13 +340,7 @@ function CallPageContent() {
         }
       })
 
-      // Handshake initiate
-      setTimeout(() => {
-        if (mounted) {
-          console.log('Initial Join signal sending...')
-          signaling?.sendJoin()
-        }
-      }, 1000)
+      // Presence will automatically handle peer detection
     }
 
     initializeConnection()

@@ -39,18 +39,13 @@ export class SupabaseSignaling {
         const peerIds = Object.keys(state).filter(id => id !== this.userId)
         const isPeerOnline = peerIds.length > 0
         
-        console.log('SupabaseSignaling: Presence sync. Peers online:', peerIds)
+        console.log('SupabaseSignaling: Presence sync. Peers online:', peerIds, 'Count:', peerIds.length)
         this.onPeerStatusCallback?.(isPeerOnline)
-        
-        if (isPeerOnline) {
-          this.sendJoin()
-        }
       })
       .on('presence', { event: 'join' }, ({ key }: { key: string }) => {
         if (key !== this.userId) {
           console.log('SupabaseSignaling: Peer joined via presence:', key)
           this.onPeerStatusCallback?.(true)
-          this.sendJoin()
         }
       })
       .on('presence', { event: 'leave' }, ({ key }: { key: string }) => {
@@ -110,11 +105,7 @@ export class SupabaseSignaling {
     this.send('ice-candidate', { candidate })
   }
 
-  sendJoin(): void {
-    this.send('peer-joined', {})
-  }
-
-  private async send(type: 'offer' | 'answer' | 'ice-candidate' | 'peer-joined', data: any): Promise<void> {
+  private async send(type: 'offer' | 'answer' | 'ice-candidate', data: any): Promise<void> {
     if (!this.isSubscribed) {
       console.log('SupabaseSignaling: Not subscribed yet, queuing message:', type)
       this.pendingMessages.push({ type, data })
