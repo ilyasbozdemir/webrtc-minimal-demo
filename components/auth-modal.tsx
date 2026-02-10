@@ -12,9 +12,7 @@ import { toast } from 'sonner'
 export function AuthModal() {
     const [isOpen, setIsOpen] = useState(false)
     const [isLoading, setIsLoading] = useState(false)
-    const [isLogin, setIsLogin] = useState(true)
-    const [email, setEmail] = useState('')
-    const [password, setPassword] = useState('')
+    const [username, setUsername] = useState('')
     const [user, setUser] = useState<any>(null)
 
     useEffect(() => {
@@ -25,32 +23,28 @@ export function AuthModal() {
         return () => subscription.unsubscribe()
     }, [])
 
-    const handleSubmit = async (e: React.FormEvent) => {
+    const handleQuickLogin = async (e: React.FormEvent) => {
         e.preventDefault()
+        if (!username) return
         setIsLoading(true)
 
         try {
-            if (isLogin) {
-                const { error } = await supabase.auth.signInWithPassword({ email, password })
-                if (error) throw error
-                toast.success('Giriş başarılı!')
-            } else {
-                const { error } = await supabase.auth.signUp({
-                    email,
-                    password,
-                    options: {
-                        data: {
-                            full_name: email.split('@')[0], // Default name from email
-                        }
+            // Anonim giriş yap ve kullanıcı bilgilerini güncelle
+            const { data, error } = await supabase.auth.signInAnonymously({
+                options: {
+                    data: {
+                        full_name: username,
+                        display_name: username
                     }
-                })
-                if (error) throw error
-                toast.success('Kayıt başarılı! Şimdi giriş yapabilirsiniz.')
-                setIsLogin(true)
-            }
+                }
+            })
+
+            if (error) throw error
+
+            toast.success(`Hoş geldin, ${username}!`)
             setIsOpen(false)
         } catch (error: any) {
-            toast.error(error.message || 'Bir hata oluştu')
+            toast.error(error.message || 'Giriş yapılamadı')
         } finally {
             setIsLoading(false)
         }
@@ -58,20 +52,21 @@ export function AuthModal() {
 
     const handleLogout = async () => {
         await supabase.auth.signOut()
-        toast.success('Çıkış yapıldı')
+        toast.success('Görüşmeden ayrıldınız')
     }
 
     if (user) {
+        const displayName = user.user_metadata?.display_name || user.email?.split('@')[0] || 'Kullanıcı'
         return (
             <div className="flex items-center gap-4">
-                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10 text-primary">
+                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10 text-primary border border-primary/20">
                     <User className="h-5 w-5" />
                 </div>
                 <div className="hidden flex-col sm:flex">
-                    <span className="text-xs font-medium text-muted-foreground uppercase tracking-widest">Giriş Yapıldı</span>
-                    <span className="text-sm font-semibold truncate max-w-[150px]">{user.email}</span>
+                    <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-[0.2em]">Aktif Oturum</span>
+                    <span className="text-sm font-bold truncate max-w-[150px]">{displayName}</span>
                 </div>
-                <Button variant="ghost" size="icon" onClick={handleLogout} title="Çıkış Yap">
+                <Button variant="ghost" size="icon" onClick={handleLogout} title="Çıkış Yap" className="hover:bg-destructive/10 hover:text-destructive">
                     <LogOut className="h-4 w-4" />
                 </Button>
             </div>
@@ -81,70 +76,46 @@ export function AuthModal() {
     return (
         <Dialog open={isOpen} onOpenChange={setIsOpen}>
             <DialogTrigger asChild>
-                <Button variant="outline" className="gap-2">
+                <Button variant="outline" className="gap-2 border-primary/20 hover:bg-primary/5">
                     <LogIn className="h-4 w-4" />
                     Giriş Yap
                 </Button>
             </DialogTrigger>
             <DialogContent className="sm:max-w-[400px]">
                 <DialogHeader>
-                    <DialogTitle>{isLogin ? 'Hesabınıza Giriş Yapın' : 'Yeni Hesap Oluştur'}</DialogTitle>
+                    <DialogTitle>Görüşmeye Katıl</DialogTitle>
                     <DialogDescription>
-                        {isLogin
-                            ? 'Görüşme geçmişinizi kaydetmek ve profilinizi kişiselleştirmek için giriş yapın.'
-                            : 'Hızla hesap oluşturun ve görüşmelere hemen katılın.'}
+                        Mail veya şifre ile uğraşmanıza gerek yok. Sadece bir isim girerek anında bağlanın.
                     </DialogDescription>
                 </DialogHeader>
-                <form onSubmit={handleSubmit} className="space-y-4 py-4">
+                <form onSubmit={handleQuickLogin} className="space-y-4 py-4">
                     <div className="space-y-2">
-                        <Label htmlFor="email">E-posta</Label>
+                        <Label htmlFor="username">Adınız veya Takma Adınız</Label>
                         <div className="relative">
-                            <Mail className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                            <User className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
                             <Input
-                                id="email"
-                                type="email"
-                                placeholder="ornek@email.com"
-                                className="pl-10"
-                                value={email}
-                                onChange={(e) => setEmail(e.target.value)}
+                                id="username"
+                                type="text"
+                                placeholder="Örn: Ahmet Yılmaz"
+                                className="pl-10 h-12"
+                                value={username}
+                                onChange={(e) => setUsername(e.target.value)}
                                 required
+                                autoFocus
                             />
                         </div>
                     </div>
-                    <div className="space-y-2">
-                        <Label htmlFor="password">Şifre</Label>
-                        <div className="relative">
-                            <Lock className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                            <Input
-                                id="password"
-                                type="password"
-                                placeholder="••••••••"
-                                className="pl-10"
-                                value={password}
-                                onChange={(e) => setPassword(e.target.value)}
-                                required
-                            />
-                        </div>
-                    </div>
-                    <Button type="submit" className="w-full" disabled={isLoading}>
+                    <Button type="submit" className="w-full h-12 text-lg font-bold shadow-lg" disabled={isLoading || !username}>
                         {isLoading ? (
-                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        ) : isLogin ? (
-                            <LogIn className="mr-2 h-4 w-4" />
+                            <Loader2 className="mr-2 h-5 w-5 animate-spin" />
                         ) : (
-                            <UserPlus className="mr-2 h-4 w-4" />
+                            <LogIn className="mr-2 h-5 w-5" />
                         )}
-                        {isLogin ? 'Giriş Yap' : 'Kayıt Ol'}
+                        Hele Bir Gir Bakalım
                     </Button>
-                    <div className="text-center text-sm">
-                        <button
-                            type="button"
-                            className="text-primary hover:underline"
-                            onClick={() => setIsLogin(!isLogin)}
-                        >
-                            {isLogin ? 'Henüz hesabınız yok mu? Kayıt olun' : 'Zaten hesabınız var mı? Giriş yapın'}
-                        </button>
-                    </div>
+                    <p className="text-[10px] text-center text-muted-foreground uppercase tracking-widest">
+                        Anonim oturum açılır, mail gönderilmez.
+                    </p>
                 </form>
             </DialogContent>
         </Dialog>
