@@ -1,8 +1,8 @@
 import { Badge } from '@/components/ui/badge'
-import type { ConnectionState } from '@/lib/types/webrtc'
+import type { ConnectionStatus } from '@/lib/types/webrtc'
 
 interface ConnectionStatusBadgeProps {
-  state: ConnectionState
+  state: ConnectionStatus
   className?: string
 }
 

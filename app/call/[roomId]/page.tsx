@@ -15,7 +15,7 @@ import { MediaDeviceManager } from '@/lib/webrtc/media-devices'
 import { SupabaseSignaling } from '@/lib/webrtc/supabase-signaling'
 import { SignalingMessage } from '@/lib/webrtc/local-signaling'
 import { VideoQuality } from '@/lib/webrtc/config'
-import { ConnectionState, CallState } from '@/lib/types/webrtc'
+import { ConnectionStatus, CallState } from '@/lib/types/webrtc'
 import { formatRoomId } from '@/lib/utils/room'
 import { useChat } from '@/hooks/use-chat'
 import { useConnectionQuality } from '@/hooks/use-connection-quality'
@@ -62,7 +62,6 @@ function CallPageContent() {
     const q = (searchParams.get('quality') as VideoQuality) || '720p'
     const name = searchParams.get('userName') || 'Misafir'
 
-    // IsCreating bilgisini koru (Refresh yapınca kaybolmaması için)
     if (searchParams.has('create')) {
       sessionStorage.setItem(`isCreating_${roomId}`, createParam.toString())
       setIsCreating(createParam)
@@ -74,7 +73,6 @@ function CallPageContent() {
     setDevices({ audio, video, quality: q })
     if (name !== 'Misafir') setUserName(name)
 
-    // URL'deki teknik parametreleri gizle
     if (searchParams.has('create') || searchParams.has('audioDevice')) {
       router.replace(`/call/${roomId}`, { scroll: false })
     }
@@ -82,7 +80,7 @@ function CallPageContent() {
 
   const [localStream, setLocalStream] = useState<MediaStream | null>(null)
   const [remoteStream, setRemoteStream] = useState<MediaStream | null>(null)
-  const [connectionState, setConnectionState] = useState<ConnectionState>('idle')
+  const [connectionState, setConnectionState] = useState<ConnectionStatus>('idle')
   const [callState, setCallState] = useState<CallState>({
     isAudioEnabled: true,
     isVideoEnabled: true,
@@ -113,7 +111,6 @@ function CallPageContent() {
 
   useEffect(() => {
     const initializeStream = async () => {
-      // Sadece cihazlar set edildikten sonra (ya da varsayılanla) başlat
       try {
         const stream = await MediaDeviceManager.getUserMedia(
           devices.audio,
@@ -190,7 +187,7 @@ function CallPageContent() {
 
       pc.onconnectionstatechange = () => {
         if (!mounted) return
-        const state = peerConnection?.getConnectionState()
+        const state = pc.connectionState
         console.log('Connection state:', state)
 
         if (state === 'connected') {
@@ -257,7 +254,6 @@ function CallPageContent() {
         }
       }
 
-      // Presence tabanlı anlık bağlantı: Karşı taraf online olduğu an el sıkışmayı başlat
       signaling.onPeerStatus((isOnline) => {
         if (!mounted) return
         setIsPeerOnline(isOnline)
@@ -270,37 +266,26 @@ function CallPageContent() {
 
       signaling.onMessage(async (message: SignalingMessage) => {
         if (!mounted) return
-
-        if (message.type === 'peer-joined' && isCreating && pc.iceConnectionState !== 'connected') {
-          console.log('Creator: Peer joined via signaling, starting handshake')
-          try {
-            const offer = await pc.createOffer({ iceRestart: true })
-            await pc.setLocalDescription(offer)
-            signaling?.sendOffer(pc.localDescription!)
-          } catch (err) {
-            console.error('Handshake failed:', err)
-          }
-          return
-        }
+        if (message.from === userId) return
 
         const messageKey = `${message.from}-${message.type}-${message.id}`
-        if (processedMessagesRef.current.has(messageKey)) {
-          return
-        }
-
-        if (message.from === userId) {
-          return
-        }
+        if (processedMessagesRef.current.has(messageKey)) return
+        processedMessagesRef.current.add(messageKey)
 
         console.log('Processing message:', message.type, 'from:', message.from)
-        processedMessagesRef.current.add(messageKey)
 
         try {
           if (message.type === 'peer-joined' && isCreating && pc.iceConnectionState !== 'connected') {
-            console.log('Creator: Peer joined, re-starting negotiation (Handshake)')
-            const offer = await pc.createOffer({ iceRestart: true })
-            await pc.setLocalDescription(offer)
-            signaling?.sendOffer(pc.localDescription!)
+            if (makingOfferRef.current) return
+            makingOfferRef.current = true
+            console.log('Creator: Peer joined, creating offer (iceRestart: true)')
+            try {
+              const offer = await pc.createOffer({ iceRestart: true })
+              await pc.setLocalDescription(offer)
+              signaling?.sendOffer(pc.localDescription!)
+            } finally {
+              makingOfferRef.current = false
+            }
             return
           }
 
@@ -366,20 +351,6 @@ function CallPageContent() {
         }
       })
 
-      if (isCreating) {
-        pc.onnegotiationneeded = async () => {
-          if (!mounted) return
-          try {
-            console.log('Creator: negotiation needed')
-            const offer = await pc.createOffer()
-            await pc.setLocalDescription(offer)
-            signaling?.sendOffer(pc.localDescription!)
-          } catch (err) {
-            console.error('Error during negotiation:', err)
-          }
-        }
-      }
-
       // Handshake initiate
       setTimeout(() => {
         if (mounted) signaling?.sendJoin()
@@ -392,8 +363,8 @@ function CallPageContent() {
       mounted = false
       console.log('Cleaning up connection')
       processedMessagesRef.current.clear()
-      if (signaling) signaling.close()
-      if (peerConnection) peerConnection.close()
+      if (signalingRef.current) signalingRef.current.close()
+      if (peerConnectionRef.current) peerConnectionRef.current.close()
     }
   }, [localStream, roomId, isCreating, userId])
 
@@ -441,11 +412,9 @@ function CallPageContent() {
         console.log('Share failed:', err)
       }
     } else {
-      // Fallback: Copy to clipboard and show toast or alert
       await navigator.clipboard.writeText(url)
       setCopied(true)
       setTimeout(() => setCopied(false), 2000)
-      // Custom WhatsApp link as fallback if share API is not available
       const waUrl = `https://wa.me/?text=${encodeURIComponent(text + ' ' + url)}`
       window.open(waUrl, '_blank')
     }
@@ -459,7 +428,7 @@ function CallPageContent() {
 
   return (
     <div className="flex min-h-screen flex-col bg-background">
-      {/* Header - More compact and subtle */}
+      {/* Header */}
       <div className="border-b bg-card/50 backdrop-blur-md">
         <div className="container mx-auto flex items-center justify-between px-4 py-2 sm:py-3">
           <div className="flex items-center gap-3">
@@ -591,7 +560,6 @@ function CallPageContent() {
           )}
 
           <div className="relative mx-auto flex w-full max-w-6xl flex-1 flex-col items-center justify-center gap-4">
-            {/* Remote Video Container - Restricted size on desktop */}
             <div className="relative aspect-video w-full max-h-[75vh] min-h-[300px] overflow-hidden rounded-2xl border bg-black shadow-2xl transition-all duration-500">
               <VideoPlayer
                 stream={remoteStream}
@@ -599,7 +567,6 @@ function CallPageContent() {
                 className="h-full w-full object-cover"
               />
 
-              {/* Floating Status Bar inside Video */}
               {connectionState === 'connected' && (
                 <div className="absolute left-4 top-4 z-10 hidden sm:block">
                   <ConnectionStatusBadge state={connectionState} />
@@ -607,7 +574,6 @@ function CallPageContent() {
               )}
             </div>
 
-            {/* Local Pip (Picture in Picture) - More stylish */}
             <div className="absolute bottom-4 right-4 z-30 w-28 overflow-hidden rounded-xl border-2 border-background shadow-2xl transition-all duration-300 hover:scale-105 sm:bottom-6 sm:right-6 sm:w-40 lg:w-56">
               <VideoPlayer
                 stream={localStream}
@@ -637,7 +603,6 @@ function CallPageContent() {
 
         {isChatOpen && (
           <>
-            {/* Mobile: Full screen overlay */}
             <div className="fixed inset-0 z-50 bg-background lg:hidden">
               <div className="flex h-full flex-col">
                 <div className="flex items-center justify-between border-b bg-card px-4 py-3">
@@ -660,7 +625,6 @@ function CallPageContent() {
               </div>
             </div>
 
-            {/* Desktop: Sidebar */}
             <div className="hidden w-80 border-l bg-card lg:block lg:w-96">
               <ChatPanel
                 messages={messages}

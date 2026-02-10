@@ -1,5 +1,5 @@
 // WebRTC connection states
-export type ConnectionState = 'idle' | 'connecting' | 'connected' | 'reconnecting' | 'failed' | 'disconnected'
+export type ConnectionStatus = 'connected' | 'connecting' | 'idle' | 'reconnecting' | 'failed' | 'disconnected'
 
 // Signaling message types
 export type SignalingMessageType = 
@@ -45,7 +45,7 @@ export interface ConnectionQuality {
 export interface CallState {
   isAudioEnabled: boolean
   isVideoEnabled: boolean
-  connectionState: ConnectionState
+  connectionState: ConnectionStatus
   roomId: string | null
   remoteUserId: string | null
 }
