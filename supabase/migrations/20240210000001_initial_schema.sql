@@ -1,4 +1,4 @@
--- Create rooms table
+-- 1. Tables (Idempotent)
 CREATE TABLE IF NOT EXISTS public.rooms (
     id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
     room_id TEXT UNIQUE NOT NULL,
@@ -6,7 +6,6 @@ CREATE TABLE IF NOT EXISTS public.rooms (
     status TEXT DEFAULT 'active' CHECK (status IN ('active', 'finished'))
 );
 
--- Create participants table to track who is in the room
 CREATE TABLE IF NOT EXISTS public.participants (
     id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
     room_id TEXT REFERENCES public.rooms(room_id) ON DELETE CASCADE,
@@ -15,7 +14,6 @@ CREATE TABLE IF NOT EXISTS public.participants (
     UNIQUE(room_id, user_id)
 );
 
--- Create chat_messages table
 CREATE TABLE IF NOT EXISTS public.chat_messages (
     id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
     room_id TEXT REFERENCES public.rooms(room_id) ON DELETE CASCADE,
@@ -24,21 +22,62 @@ CREATE TABLE IF NOT EXISTS public.chat_messages (
     created_at TIMESTAMPTZ DEFAULT now() NOT NULL
 );
 
--- Enable RLS
+-- 2. Enable RLS
 ALTER TABLE public.rooms ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.participants ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.chat_messages ENABLE ROW LEVEL SECURITY;
 
--- Policies
-CREATE POLICY "Public rooms are viewable by everyone" ON public.rooms FOR SELECT USING (true);
-CREATE POLICY "Public rooms are insertable by everyone" ON public.rooms FOR INSERT WITH CHECK (true);
-CREATE POLICY "Public participants are viewable by everyone" ON public.participants FOR SELECT USING (true);
-CREATE POLICY "Public participants are insertable by everyone" ON public.participants FOR INSERT WITH CHECK (true);
-CREATE POLICY "Public participants are updatable by everyone" ON public.participants FOR UPDATE USING (true);
-CREATE POLICY "Public chat messages are viewable by everyone" ON public.chat_messages FOR SELECT USING (true);
-CREATE POLICY "Public chat messages are insertable by everyone" ON public.chat_messages FOR INSERT WITH CHECK (true);
+-- 3. Policies (Drop if exists then create for idempotency)
+DO $$ 
+BEGIN
+    -- Rooms Policies
+    DROP POLICY IF EXISTS "Public rooms are viewable by everyone" ON public.rooms;
+    CREATE POLICY "Public rooms are viewable by everyone" ON public.rooms FOR SELECT USING (true);
+    
+    DROP POLICY IF EXISTS "Public rooms are insertable by everyone" ON public.rooms;
+    CREATE POLICY "Public rooms are insertable by everyone" ON public.rooms FOR INSERT WITH CHECK (true);
 
--- Enable Realtime
-ALTER PUBLICATION supabase_realtime ADD TABLE public.rooms;
-ALTER PUBLICATION supabase_realtime ADD TABLE public.participants;
-ALTER PUBLICATION supabase_realtime ADD TABLE public.chat_messages;
+    -- Participants Policies
+    DROP POLICY IF EXISTS "Public participants are viewable by everyone" ON public.participants;
+    CREATE POLICY "Public participants are viewable by everyone" ON public.participants FOR SELECT USING (true);
+    
+    DROP POLICY IF EXISTS "Public participants are insertable by everyone" ON public.participants;
+    CREATE POLICY "Public participants are insertable by everyone" ON public.participants FOR INSERT WITH CHECK (true);
+    
+    DROP POLICY IF EXISTS "Public participants are updatable by everyone" ON public.participants;
+    CREATE POLICY "Public participants are updatable by everyone" ON public.participants FOR UPDATE USING (true);
+
+    -- Chat Messages Policies
+    DROP POLICY IF EXISTS "Public chat messages are viewable by everyone" ON public.chat_messages;
+    CREATE POLICY "Public chat messages are viewable by everyone" ON public.chat_messages FOR SELECT USING (true);
+    
+    DROP POLICY IF EXISTS "Public chat messages are insertable by everyone" ON public.chat_messages;
+    CREATE POLICY "Public chat messages are insertable by everyone" ON public.chat_messages FOR INSERT WITH CHECK (true);
+END $$;
+
+-- 4. Enable Realtime (Idempotent check)
+-- Note: In Supabase, you can manage this via the UI, 
+-- but if using SQL, we should check if they are already in the publication.
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_publication_tables 
+        WHERE pubname = 'supabase_realtime' AND schemaname = 'public' AND tablename = 'rooms'
+    ) THEN
+        ALTER PUBLICATION supabase_realtime ADD TABLE public.rooms;
+    END IF;
+
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_publication_tables 
+        WHERE pubname = 'supabase_realtime' AND schemaname = 'public' AND tablename = 'participants'
+    ) THEN
+        ALTER PUBLICATION supabase_realtime ADD TABLE public.participants;
+    END IF;
+
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_publication_tables 
+        WHERE pubname = 'supabase_realtime' AND schemaname = 'public' AND tablename = 'chat_messages'
+    ) THEN
+        ALTER PUBLICATION supabase_realtime ADD TABLE public.chat_messages;
+    END IF;
+END $$;
