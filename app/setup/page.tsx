@@ -119,10 +119,23 @@ function SetupPageContent() {
     setPermissionsGranted(false)
   }
 
-  const handleJoinCall = () => {
+  const handleJoinCall = async () => {
     if (!permissionsGranted) {
       setError('Devam etmek için kamera ve mikrofon izinlerini vermelisiniz.')
       return
+    }
+
+    // Register room in Supabase if creating
+    if (isCreating) {
+      try {
+        const { supabase } = await import('@/lib/supabase')
+        await supabase
+          .from('rooms')
+          .upsert({ room_id: roomId, status: 'active' }, { onConflict: 'room_id' })
+      } catch (err) {
+        console.error('Failed to register room:', err)
+        // We continue even if DB registration fails, but log it
+      }
     }
 
     // Navigate to call page with selected devices
