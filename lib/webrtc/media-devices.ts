@@ -39,11 +39,14 @@ export class MediaDeviceManager {
     try {
       const constraints: MediaStreamConstraints = {
         audio: audioDeviceId
-          ? { ...DEFAULT_MEDIA_CONSTRAINTS.audio, deviceId: { exact: audioDeviceId } }
+          ? {
+              ...(typeof DEFAULT_MEDIA_CONSTRAINTS.audio === 'object' ? DEFAULT_MEDIA_CONSTRAINTS.audio : {}),
+              deviceId: { exact: audioDeviceId },
+            }
           : DEFAULT_MEDIA_CONSTRAINTS.audio,
         video: videoDeviceId
           ? {
-              ...VIDEO_QUALITY_PRESETS[videoQuality],
+              ...(typeof VIDEO_QUALITY_PRESETS[videoQuality] === 'object' ? VIDEO_QUALITY_PRESETS[videoQuality] : {}),
               deviceId: { exact: videoDeviceId },
             }
           : VIDEO_QUALITY_PRESETS[videoQuality],
@@ -60,9 +63,10 @@ export class MediaDeviceManager {
   // Check if browser supports WebRTC
   static isWebRTCSupported(): boolean {
     return !!(
-      navigator.mediaDevices &&
-      navigator.mediaDevices.getUserMedia &&
-      window.RTCPeerConnection
+      typeof window !== 'undefined' &&
+      navigator?.mediaDevices &&
+      typeof navigator.mediaDevices.getUserMedia === 'function' &&
+      !!window.RTCPeerConnection
     )
   }
 

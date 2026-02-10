@@ -98,9 +98,8 @@ function CallPageContent() {
   const peerConnectionRef = useRef<WebRTCPeerConnection | null>(null)
   const signalingRef = useRef<SupabaseSignaling | null>(null)
   const makingOfferRef = useRef(false)
-  const ignoreOfferRef = useRef(false)
-  const pendingCandidatesRef = useRef<RTCIceCandidateInit[]>([])
   const processedMessagesRef = useRef<Set<string>>(new Set())
+  const pendingCandidatesRef = useRef<RTCIceCandidateInit[]>([])
 
   const { messages, sendMessage, isReady: isChatReady } = useChat({ dataChannel })
 
@@ -293,7 +292,6 @@ function CallPageContent() {
             if (message.candidate) {
               if (pc.remoteDescription) {
                 await pc.addIceCandidate(new RTCIceCandidate(message.candidate))
-                console.log('ICE candidate added')
               } else {
                 pendingCandidatesRef.current.push(message.candidate)
               }
@@ -302,17 +300,13 @@ function CallPageContent() {
           }
 
           if (message.type === 'offer') {
-            if (isCreating) {
-              console.log('Creator ignoring offer')
-              return
-            }
+            if (isCreating) return
 
             console.log('Joiner processing offer')
             await pc.setRemoteDescription(new RTCSessionDescription(message.offer!))
             const answer = await pc.createAnswer()
             await pc.setLocalDescription(answer)
             signaling?.sendAnswer(answer)
-            console.log('Answer sent')
 
             if (pendingCandidatesRef.current.length > 0) {
               for (const candidate of pendingCandidatesRef.current) {
@@ -325,10 +319,7 @@ function CallPageContent() {
               pendingCandidatesRef.current = []
             }
           } else if (message.type === 'answer') {
-            if (!isCreating) {
-              console.log('Joiner ignoring answer')
-              return
-            }
+            if (!isCreating) return
 
             console.log('Creator processing answer')
             await pc.setRemoteDescription(new RTCSessionDescription(message.answer!))
@@ -347,14 +338,16 @@ function CallPageContent() {
         } catch (err) {
           console.error('Error handling signaling message:', err)
           processedMessagesRef.current.delete(messageKey)
-          if (mounted) setError('Sinyal işleme hatası oluştu.')
         }
       })
 
       // Handshake initiate
       setTimeout(() => {
-        if (mounted) signaling?.sendJoin()
-      }, 1500)
+        if (mounted) {
+          console.log('Initial Join signal sending...')
+          signaling?.sendJoin()
+        }
+      }, 1000)
     }
 
     initializeConnection()
@@ -502,7 +495,7 @@ function CallPageContent() {
             </Alert>
           )}
 
-          {connectionState !== 'connected' && !remoteStream && (
+          {(connectionState !== 'connected' || !remoteStream) && (
             <div className="absolute inset-0 z-20 flex items-center justify-center bg-background/60 backdrop-blur-sm">
               <div className="text-center p-8 bg-card border rounded-3xl shadow-2xl max-w-sm animate-in zoom-in-95 duration-300">
                 <div className="mb-6 flex justify-center">
