@@ -7,14 +7,17 @@ export class SupabaseSignaling {
   private channel: any
   private onMessageCallback: ((message: SignalingMessage) => void) | null = null
 
+  private isSubscribed = false
+  private pendingMessages: any[] = []
+
   constructor(roomId: string, userId: string) {
     this.roomId = roomId
     this.userId = userId
     
-    // Create a channel for this room
     this.channel = supabase.channel(`room_${roomId}`, {
       config: {
         broadcast: { self: false },
+        presence: { key: userId },
       },
     })
 
@@ -31,9 +34,45 @@ export class SupabaseSignaling {
           this.onMessageCallback?.(payload)
         }
       })
-      .subscribe((status: string) => {
-        console.log('SupabaseSignaling: Channel status:', status)
+      .on('presence', { event: 'sync' }, () => {
+        const state = this.channel.presenceState()
+        console.log('SupabaseSignaling: Presence state synced:', state)
       })
+      .subscribe(async (status: string) => {
+        console.log('SupabaseSignaling: Channel status:', status)
+        if (status === 'SUBSCRIBED') {
+          this.isSubscribed = true
+          
+          // Katılımcıyı DB'ye kaydet
+          await this.registerParticipant()
+          
+          // Track presence
+          await this.channel.track({
+            online_at: new Date().toISOString(),
+            user_id: this.userId,
+          })
+
+          // Bekleyen mesajları gönder
+          while (this.pendingMessages.length > 0) {
+            const msg = this.pendingMessages.shift()
+            this.send(msg.type, msg.data)
+          }
+        }
+      })
+  }
+
+  private async registerParticipant() {
+    try {
+      await supabase
+        .from('participants')
+        .upsert({ 
+          room_id: this.roomId, 
+          user_id: this.userId,
+          last_seen: new Date().toISOString()
+        }, { onConflict: 'room_id,user_id' })
+    } catch (err) {
+      console.error('Failed to register participant:', err)
+    }
   }
 
   sendOffer(offer: RTCSessionDescriptionInit): void {
@@ -49,6 +88,12 @@ export class SupabaseSignaling {
   }
 
   private async send(type: 'offer' | 'answer' | 'ice-candidate', data: any): Promise<void> {
+    if (!this.isSubscribed) {
+      console.log('SupabaseSignaling: Not subscribed yet, queuing message:', type)
+      this.pendingMessages.push({ type, data })
+      return
+    }
+
     const message: SignalingMessage = {
       type,
       roomId: this.roomId,
@@ -60,15 +105,11 @@ export class SupabaseSignaling {
 
     console.log('SupabaseSignaling: Sending signal:', type, 'from:', this.userId)
     
-    const response = await this.channel.send({
+    this.channel.send({
       type: 'broadcast',
       event: 'signal',
       payload: message,
     })
-
-    if (response !== 'ok') {
-      console.error('SupabaseSignaling: Failed to send signal:', response)
-    }
   }
 
   close(): void {
