@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { supabase } from '@/lib/supabase'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -17,13 +17,13 @@ export function AuthModal() {
     const [password, setPassword] = useState('')
     const [user, setUser] = useState<any>(null)
 
-    useState(() => {
+    useEffect(() => {
         supabase.auth.getUser().then(({ data: { user } }) => setUser(user))
         const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
             setUser(session?.user ?? null)
         })
         return () => subscription.unsubscribe()
-    })
+    }, [])
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault()
@@ -45,7 +45,8 @@ export function AuthModal() {
                     }
                 })
                 if (error) throw error
-                toast.success('Kayıt başarılı! Lütfen e-postanızı kontrol edin.')
+                toast.success('Kayıt başarılı! Şimdi giriş yapabilirsiniz.')
+                setIsLogin(true)
             }
             setIsOpen(false)
         } catch (error: any) {
@@ -91,7 +92,7 @@ export function AuthModal() {
                     <DialogDescription>
                         {isLogin
                             ? 'Görüşme geçmişinizi kaydetmek ve profilinizi kişiselleştirmek için giriş yapın.'
-                            : 'Ücretsiz bir hesap oluşturarak sistemin tüm özelliklerinden faydalanın.'}
+                            : 'Hızla hesap oluşturun ve görüşmelere hemen katılın.'}
                     </DialogDescription>
                 </DialogHeader>
                 <form onSubmit={handleSubmit} className="space-y-4 py-4">

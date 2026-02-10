@@ -15,6 +15,7 @@ import { formatRoomId } from '@/lib/utils/room'
 import { Video, Settings, AlertCircle, ArrowRight, ArrowLeft, Share2, Mic, MicOff, User } from 'lucide-react'
 import { useAudioLevel } from '@/hooks/use-audio-level'
 import { supabase } from '@/lib/supabase'
+import { toast } from 'sonner'
 
 function SetupPageContent() {
   const router = useRouter()
@@ -153,6 +154,12 @@ function SetupPageContent() {
   }
 
   const handleJoinCall = async () => {
+    if (!user) {
+      setError('Görüşmeye katılmak için önce giriş yapmalısınız.')
+      toast.error('Giriş yapmanız gerekiyor')
+      return
+    }
+
     if (!permissionsGranted) {
       setError('Devam etmek için kamera ve mikrofon izinlerini vermelisiniz.')
       return

@@ -19,7 +19,9 @@ import { ConnectionState, CallState } from '@/lib/types/webrtc'
 import { formatRoomId } from '@/lib/utils/room'
 import { useChat } from '@/hooks/use-chat'
 import { useConnectionQuality } from '@/hooks/use-connection-quality'
-import { AlertCircle, Copy, Check, BarChart3, X, Share2, Video, Users, ShieldCheck } from 'lucide-react'
+import { AlertCircle, Copy, Check, BarChart3, X, Share2, Video, Users, ShieldCheck, Lock } from 'lucide-react'
+import { supabase } from '@/lib/supabase'
+import { toast } from 'sonner'
 
 function CallPageContent() {
   const router = useRouter()
@@ -32,19 +34,42 @@ function CallPageContent() {
   const [isCreating, setIsCreating] = useState(false)
   const [devices, setDevices] = useState({ audio: '', video: '', quality: '720p' as VideoQuality })
 
-  // Modern URL: Parametreleri oku ve URL'yi temizle
+  // Auth check & Modern URL handling
   useEffect(() => {
-    const create = searchParams.get('create') === 'true'
+    const checkAuth = async () => {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) {
+        toast.error('Görüşmeye katılmak için giriş yapmalısınız', {
+          id: 'auth-required',
+          icon: <Lock className="h-4 w-4" />
+        })
+        router.replace('/')
+        return
+      }
+      setUserName(user.email?.split('@')[0] || 'Kullanıcı')
+    }
+
+    checkAuth()
+
+    const createParam = searchParams.get('create') === 'true'
     const audio = searchParams.get('audioDevice') || ''
     const video = searchParams.get('videoDevice') || ''
     const q = (searchParams.get('quality') as VideoQuality) || '720p'
     const name = searchParams.get('userName') || 'Misafir'
 
-    setIsCreating(create)
-    setDevices({ audio, video, quality: q })
-    setUserName(name)
+    // IsCreating bilgisini koru (Refresh yapınca kaybolmaması için)
+    if (searchParams.has('create')) {
+      sessionStorage.setItem(`isCreating_${roomId}`, createParam.toString())
+      setIsCreating(createParam)
+    } else {
+      const persistedIsCreating = sessionStorage.getItem(`isCreating_${roomId}`) === 'true'
+      setIsCreating(persistedIsCreating)
+    }
 
-    // URL'deki teknik parametreleri gizle (daha modern görünüm)
+    setDevices({ audio, video, quality: q })
+    if (name !== 'Misafir') setUserName(name)
+
+    // URL'deki teknik parametreleri gizle
     if (searchParams.has('create') || searchParams.has('audioDevice')) {
       router.replace(`/call/${roomId}`, { scroll: false })
     }
