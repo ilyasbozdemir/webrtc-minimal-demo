@@ -12,7 +12,8 @@ import { ConnectionStatusBadge } from '@/components/connection-status-badge'
 import { ConnectionQualityIndicator } from '@/components/connection-quality-indicator'
 import { WebRTCPeerConnection } from '@/lib/webrtc/peer-connection'
 import { MediaDeviceManager } from '@/lib/webrtc/media-devices'
-import { LocalSignaling, SignalingMessage } from '@/lib/webrtc/local-signaling'
+import { SupabaseSignaling } from '@/lib/webrtc/supabase-signaling'
+import { SignalingMessage } from '@/lib/webrtc/local-signaling'
 import { VideoQuality } from '@/lib/webrtc/config'
 import { ConnectionState, CallState } from '@/lib/types/webrtc'
 import { formatRoomId } from '@/lib/utils/room'
@@ -50,7 +51,7 @@ function CallPageContent() {
   const [dataChannel, setDataChannel] = useState<RTCDataChannel | null>(null)
 
   const peerConnectionRef = useRef<WebRTCPeerConnection | null>(null)
-  const signalingRef = useRef<LocalSignaling | null>(null)
+  const signalingRef = useRef<SupabaseSignaling | null>(null)
   const makingOfferRef = useRef(false)
   const ignoreOfferRef = useRef(false)
   const pendingCandidatesRef = useRef<RTCIceCandidateInit[]>([])
@@ -91,11 +92,11 @@ function CallPageContent() {
 
     let mounted = true
     let peerConnection: WebRTCPeerConnection | null = null
-    let signaling: LocalSignaling | null = null
+    let signaling: SupabaseSignaling | null = null
 
     const initializeConnection = async () => {
       if (!mounted) return
-      
+
       console.log('Initializing connection. isCreating:', isCreating, 'userId:', userId)
       setConnectionState('connecting')
 
@@ -123,7 +124,7 @@ function CallPageContent() {
         if (!mounted) return
         const iceState = pc.iceConnectionState
         console.log('ICE connection state:', iceState)
-        
+
         if (iceState === 'connected' || iceState === 'completed') {
           console.log('ICE connection established!')
           setConnectionState('connected')
@@ -141,7 +142,7 @@ function CallPageContent() {
         if (!mounted) return
         const state = peerConnection?.getConnectionState()
         console.log('Connection state:', state)
-        
+
         if (state === 'connected') {
           setConnectionState('connected')
         } else if (state === 'connecting') {
@@ -168,19 +169,19 @@ function CallPageContent() {
         console.log('Incoming DataChannel received')
         const incomingChannel = event.channel
         peerConnection?.setDataChannel(incomingChannel)
-        
+
         incomingChannel.onopen = () => {
           console.log('Incoming DataChannel opened')
           if (mounted) setDataChannel(incomingChannel)
         }
-        
+
         incomingChannel.onclose = () => {
           console.log('Incoming DataChannel closed')
           if (mounted) setDataChannel(null)
         }
       }
 
-      signaling = new LocalSignaling(roomId, userId)
+      signaling = new SupabaseSignaling(roomId, userId)
       signalingRef.current = signaling
 
       pc.onicecandidate = (event) => {
@@ -194,12 +195,12 @@ function CallPageContent() {
 
       signaling.onMessage(async (message: SignalingMessage) => {
         if (!mounted) return
-        
+
         const messageKey = `${message.from}-${message.type}-${message.id}`
         if (processedMessagesRef.current.has(messageKey)) {
           return
         }
-        
+
         if (message.from === userId) {
           return
         }
@@ -225,14 +226,14 @@ function CallPageContent() {
               console.log('Creator ignoring offer')
               return
             }
-            
+
             console.log('Joiner processing offer')
             await pc.setRemoteDescription(new RTCSessionDescription(message.offer!))
             const answer = await pc.createAnswer()
             await pc.setLocalDescription(answer)
             signaling?.sendAnswer(answer)
             console.log('Answer sent')
-            
+
             if (pendingCandidatesRef.current.length > 0) {
               for (const candidate of pendingCandidatesRef.current) {
                 try {
@@ -248,10 +249,10 @@ function CallPageContent() {
               console.log('Joiner ignoring answer')
               return
             }
-            
+
             console.log('Creator processing answer')
             await pc.setRemoteDescription(new RTCSessionDescription(message.answer!))
-            
+
             if (pendingCandidatesRef.current.length > 0) {
               for (const candidate of pendingCandidatesRef.current) {
                 try {
