@@ -38,9 +38,20 @@ function SetupPageContent() {
   const [user, setUser] = useState<any>(null)
   const audioLevel = useAudioLevel(stream)
 
-  // Get user profile
+  // Get user profile from local storage
   useEffect(() => {
-    supabase.auth.getUser().then(({ data: { user } }) => setUser(user))
+    const checkUser = () => {
+      const savedUser = localStorage.getItem('webrtc_user')
+      if (savedUser) {
+        setUser(JSON.parse(savedUser))
+      } else {
+        setUser(null)
+      }
+    }
+
+    checkUser()
+    window.addEventListener('local-auth-changed', checkUser)
+    return () => window.removeEventListener('local-auth-changed', checkUser)
   }, [])
 
   // Check WebRTC support
@@ -185,7 +196,7 @@ function SetupPageContent() {
       videoDevice: selectedVideoDevice,
       quality: selectedQuality,
       create: isCreating.toString(),
-      userName: user?.email ? user.email.split('@')[0] : 'Misafir',
+      userName: user?.name || 'Misafir',
     })
 
     router.push(`/call/${roomId}?${params.toString()}`)

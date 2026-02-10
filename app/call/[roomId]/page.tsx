@@ -34,22 +34,27 @@ function CallPageContent() {
   const [isCreating, setIsCreating] = useState(false)
   const [devices, setDevices] = useState({ audio: '', video: '', quality: '720p' as VideoQuality })
 
-  // Auth check & Modern URL handling
+  // Identity check & Modern URL handling
   useEffect(() => {
-    const checkAuth = async () => {
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) {
-        toast.error('Görüşmeye katılmak için giriş yapmalısınız', {
-          id: 'auth-required',
+    const checkIdentity = () => {
+      const savedUser = localStorage.getItem('webrtc_user')
+
+      if (!savedUser) {
+        toast.error('Görüşmeye katılmak için önce bir isim belirlemelisiniz', {
+          id: 'identity-required',
           icon: <Lock className="h-4 w-4" />
         })
         router.replace('/')
-        return
+        return null
       }
-      setUserName(user.email?.split('@')[0] || 'Kullanıcı')
+
+      const userData = JSON.parse(savedUser)
+      setUserName(userData.name)
+      return userData
     }
 
-    checkAuth()
+    const user = checkIdentity()
+    if (!user) return
 
     const createParam = searchParams.get('create') === 'true'
     const audio = searchParams.get('audioDevice') || ''

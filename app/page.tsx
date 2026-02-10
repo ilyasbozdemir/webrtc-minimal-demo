@@ -17,13 +17,25 @@ export default function LandingPage() {
   const [showActions, setShowActions] = useState(false)
 
   const handleCreateRoom = () => {
+    const savedUser = localStorage.getItem('webrtc_user')
+    if (!savedUser) {
+      setError('Görüşmeye başlamak için önce bir isim belirlemelisiniz.')
+      window.dispatchEvent(new Event('open-auth-modal'))
+      return
+    }
     const newRoomId = generateRoomId()
     router.push(`/setup?roomId=${newRoomId}&create=true`)
   }
 
   const handleJoinRoom = () => {
-    const parsedRoomId = parseRoomId(roomId)
+    const savedUser = localStorage.getItem('webrtc_user')
+    if (!savedUser) {
+      setError('Odaya katılmak için önce bir isim belirlemelisiniz.')
+      window.dispatchEvent(new Event('open-auth-modal'))
+      return
+    }
 
+    const parsedRoomId = parseRoomId(roomId)
     if (!isValidRoomId(parsedRoomId)) {
       setError('Geçersiz oda ID formatı. Lütfen 6-12 karakter uzunluğunda alfanumerik bir ID girin.')
       return
@@ -129,87 +141,95 @@ export default function LandingPage() {
               <h2 className="text-3xl font-bold">Nasıl Bağlanmak İstersiniz?</h2>
               <p className="text-muted-foreground mt-2">Yeni bir oda kurun veya arkadaşınızın odasına katılın.</p>
             </div>
-            <div className="grid gap-6 md:grid-cols-2">
+            <div className="grid gap-8 md:grid-cols-2">
               {/* Create Room Action */}
-              <Card className="flex flex-col overflow-hidden border-2 border-primary/10 transition-all hover:border-primary/30 hover:shadow-xl">
-                <CardHeader className="bg-primary/5 pb-4">
-                  <div className="mb-2 flex h-10 w-10 items-center justify-center rounded-full bg-primary/20 text-primary">
-                    <Video className="h-5 w-5" />
+              <div className="group relative">
+                <div className="absolute -inset-0.5 rounded-[2rem] bg-gradient-to-r from-primary/50 to-blue-500/50 opacity-20 blur transition duration-500 group-hover:opacity-40"></div>
+                <Card className="relative flex flex-col h-full overflow-hidden rounded-[2rem] border-primary/10 bg-card/50 backdrop-blur-xl transition-all duration-300 hover:-translate-y-1 hover:shadow-2xl hover:shadow-primary/20">
+                  <div className="absolute top-0 right-0 p-6 opacity-10 transition-opacity group-hover:opacity-20">
+                    <Video className="h-24 w-24 rotate-12" />
                   </div>
-                  <CardTitle>Yeni Görüşme</CardTitle>
-                  <CardDescription>
-                    Anında yeni bir güvenli oda oluşturun.
-                  </CardDescription>
-                </CardHeader>
-                <CardContent className="flex flex-1 flex-col p-6">
-                  <div className="mb-6 flex-1 space-y-4">
-                    <div className="flex items-center gap-2 rounded-lg bg-muted p-3 text-sm text-muted-foreground">
-                      <Activity className="h-4 w-4 shrink-0" />
-                      <span>Oda ID'si otomatik olarak oluşturulacak ve şifreli olacak.</span>
+                  <CardHeader className="pb-4">
+                    <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-2xl bg-primary text-primary-foreground shadow-lg shadow-primary/25">
+                      <Video className="h-6 w-6" />
                     </div>
-                  </div>
-                  <Button
-                    onClick={handleCreateRoom}
-                    size="lg"
-                    className="w-full shadow-md transition-transform active:scale-[0.98]"
-                  >
-                    Görüşme Başlat
-                    <ArrowRight className="ml-2 h-5 w-5" />
-                  </Button>
-                </CardContent>
-              </Card>
+                    <CardTitle className="text-2xl font-bold">Yeni Görüşme</CardTitle>
+                    <CardDescription className="text-base">
+                      Saniyeler içinde özel bir oda oluşturun ve linki paylaşın.
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent className="flex flex-1 flex-col p-6 pt-0">
+                    <ul className="mb-8 space-y-3 flex-1">
+                      {['Otomatik oda ID oluşturma', 'Uçtan uca şifreli veri', 'Katılımcı sınırı yok'].map((item, i) => (
+                        <li key={i} className="flex items-center gap-2 text-sm text-muted-foreground">
+                          <div className="h-1.5 w-1.5 rounded-full bg-primary" />
+                          {item}
+                        </li>
+                      ))}
+                    </ul>
+                    <Button
+                      onClick={handleCreateRoom}
+                      size="lg"
+                      className="w-full h-14 rounded-2xl text-lg font-bold shadow-lg transition-all active:scale-95"
+                    >
+                      Oda Oluştur
+                      <ArrowRight className="ml-2 h-5 w-5" />
+                    </Button>
+                  </CardContent>
+                </Card>
+              </div>
 
               {/* Join Room Action */}
-              <Card className="flex flex-col overflow-hidden border-2 border-transparent transition-all hover:border-border/50 hover:shadow-xl">
-                <CardHeader className="bg-muted/30 pb-4">
-                  <div className="mb-2 flex h-10 w-10 items-center justify-center rounded-full bg-muted text-muted-foreground">
-                    <Users className="h-5 w-5" />
+              <div className="group relative">
+                <div className="absolute -inset-0.5 rounded-[2rem] bg-gradient-to-r from-muted to-muted opacity-20 blur transition duration-500 group-hover:opacity-40"></div>
+                <Card className="relative flex flex-col h-full overflow-hidden rounded-[2rem] border-border/50 bg-card/50 backdrop-blur-xl transition-all duration-300 hover:-translate-y-1 hover:shadow-2xl">
+                  <div className="absolute top-0 right-0 p-6 opacity-10 transition-opacity group-hover:opacity-20">
+                    <Users className="h-24 w-24 -rotate-12" />
                   </div>
-                  <CardTitle>Odaya Katıl</CardTitle>
-                  <CardDescription>
-                    Davet edildiğiniz odaya giriş yapın.
-                  </CardDescription>
-                </CardHeader>
-                <CardContent className="flex flex-1 flex-col p-6">
-                  <div className="mb-6 flex-1 space-y-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="roomId" className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                        Oda ID
-                      </Label>
-                      <Input
-                        id="roomId"
-                        placeholder="Örn: ABCD-1234"
-                        value={roomId}
-                        onChange={(e) => {
-                          setRoomId(e.target.value.toUpperCase())
-                          setError('')
-                        }}
-                        onKeyDown={(e) => {
-                          if (e.key === 'Enter') {
-                            handleJoinRoom()
-                          }
-                        }}
-                        className="h-12 border-muted bg-muted/20 text-center font-mono text-lg tracking-widest focus-visible:ring-primary"
-                      />
-                      {error && (
-                        <p className="flex items-center gap-1 text-xs font-medium text-destructive">
-                          <AlertCircle className="h-3 w-3" />
-                          {error}
-                        </p>
-                      )}
+                  <CardHeader className="pb-4">
+                    <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-2xl bg-muted text-muted-foreground shadow-lg">
+                      <Users className="h-6 w-6" />
                     </div>
-                  </div>
-                  <Button
-                    onClick={handleJoinRoom}
-                    variant="outline"
-                    size="lg"
-                    className="w-full transition-transform active:scale-[0.98]"
-                    disabled={!roomId}
-                  >
-                    Katıl
-                  </Button>
-                </CardContent>
-              </Card>
+                    <CardTitle className="text-2xl font-bold">Odaya Katıl</CardTitle>
+                    <CardDescription className="text-base">
+                      Size gönderilen Oda ID'sini kullanarak bağlanın.
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent className="flex flex-1 flex-col p-6 pt-0">
+                    <div className="mb-8 flex-1 space-y-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="roomId" className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Oda Kodu</Label>
+                        <Input
+                          id="roomId"
+                          placeholder="Örn: ABCD-1234"
+                          value={roomId}
+                          onChange={(e) => {
+                            setRoomId(e.target.value.toUpperCase())
+                            setError('')
+                          }}
+                          onKeyDown={(e) => e.key === 'Enter' && handleJoinRoom()}
+                          className="h-14 rounded-xl border-dashed border-2 bg-muted/20 text-center font-mono text-xl tracking-[0.3em] focus-visible:ring-primary focus-visible:border-primary"
+                        />
+                        {error && (
+                          <p className="flex items-center gap-1.5 text-xs font-semibold text-destructive animate-in fade-in slide-in-from-top-1">
+                            <AlertCircle className="h-3.5 w-3.5" />
+                            {error}
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                    <Button
+                      onClick={handleJoinRoom}
+                      variant="outline"
+                      size="lg"
+                      className="w-full h-14 rounded-2xl text-lg font-bold border-2 transition-all active:scale-95"
+                      disabled={!roomId}
+                    >
+                      Katıl
+                    </Button>
+                  </CardContent>
+                </Card>
+              </div>
             </div>
           </div>
         )}
