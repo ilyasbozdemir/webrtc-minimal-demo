@@ -194,24 +194,24 @@ function SetupPageContent() {
   }
 
   return (
-    <div className="min-h-screen bg-background">
-      <div className="container mx-auto px-4 py-8">
+    <div className="min-h-screen bg-background pb-24 lg:pb-8">
+      <div className="container mx-auto px-4 py-6 sm:py-8">
         {/* Header */}
-        <div className="mb-8 flex items-center justify-between">
+        <div className="mb-6 flex items-center justify-between">
           <div>
-            <h1 className="text-2xl font-bold tracking-tight sm:text-3xl">Hazırlan</h1>
-            <p className="mt-1 text-sm text-muted-foreground sm:text-base">
-              Cihazlarını kontrol et ve görüşmeye bağlan.
+            <h1 className="text-xl font-bold tracking-tight sm:text-3xl">Görüşmeye Hazırlan</h1>
+            <p className="mt-0.5 text-xs text-muted-foreground sm:text-base">
+              Cihazlarını kontrol et ve bağlan.
             </p>
           </div>
           <Button
             variant="ghost"
             size="sm"
             onClick={() => router.push('/')}
-            className="h-9 px-3"
+            className="h-8 px-2 sm:h-9 sm:px-3 text-xs sm:text-sm"
           >
-            <ArrowLeft className="mr-2 h-4 w-4" />
-            İptal
+            <ArrowLeft className="mr-1 h-3.5 w-3.5 sm:mr-2 sm:h-4 sm:w-4" />
+            Vazgeç
           </Button>
         </div>
 
@@ -279,18 +279,15 @@ function SetupPageContent() {
           </Card>
 
           {/* Device Settings */}
-          <div className="space-y-6">
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Settings className="h-5 w-5" />
+          <div className="space-y-4 sm:space-y-6">
+            <Card className="border-none shadow-md lg:border lg:shadow-none">
+              <CardHeader className="py-4 sm:py-6">
+                <CardTitle className="text-base sm:text-lg flex items-center gap-2">
+                  <Settings className="h-4 w-4 sm:h-5 sm:w-5" />
                   Cihaz Ayarları
                 </CardTitle>
-                <CardDescription>
-                  Kullanmak istediğiniz cihazları seçin
-                </CardDescription>
               </CardHeader>
-              <CardContent className="space-y-6">
+              <CardContent className="space-y-4 sm:space-y-6">
                 <DeviceSelector
                   type="audioinput"
                   selectedDeviceId={selectedAudioDevice}
@@ -306,70 +303,57 @@ function SetupPageContent() {
                 />
 
                 <div className="space-y-2">
-                  <Label>Video Kalitesi</Label>
+                  <Label className="text-xs sm:text-sm">Video Kalitesi</Label>
                   <Select
                     value={selectedQuality}
                     onValueChange={(value) => setSelectedQuality(value as VideoQuality)}
                   >
-                    <SelectTrigger>
+                    <SelectTrigger className="h-9 sm:h-10">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="480p">
-                        480p (Düşük bant genişliği)
-                      </SelectItem>
-                      <SelectItem value="720p">
-                        720p (Önerilen)
-                      </SelectItem>
-                      <SelectItem value="1080p">
-                        1080p (Yüksek kalite)
-                      </SelectItem>
+                      <SelectItem value="480p">480p</SelectItem>
+                      <SelectItem value="720p">720p</SelectItem>
+                      <SelectItem value="1080p">1080p</SelectItem>
                     </SelectContent>
                   </Select>
-                  <p className="text-xs text-muted-foreground">
-                    Seçili: {VIDEO_QUALITY_PRESETS[selectedQuality].width.ideal}x
-                    {VIDEO_QUALITY_PRESETS[selectedQuality].height.ideal} @{' '}
-                    {VIDEO_QUALITY_PRESETS[selectedQuality].frameRate.ideal}fps
-                  </p>
                 </div>
               </CardContent>
             </Card>
 
-            <Card className="border-primary/50 bg-primary/5 shadow-inner">
-              <CardHeader className="pb-4">
-                <CardTitle className="text-lg flex items-center gap-2">
-                  <div className="h-2 w-2 animate-pulse rounded-full bg-primary" />
-                  {isCreating ? 'Oda Hazır' : 'Bağlanmaya Hazırsınız'}
-                </CardTitle>
-                <CardDescription className="text-xs">
-                  {isCreating
-                    ? 'Oda linkini paylaşın ve butona tıklayarak görüşmeyi başlatın.'
-                    : 'Butona tıklayarak görüşmeye hemen katılabilirsiniz.'}
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="flex gap-2">
-                  <Button
-                    onClick={handleJoinCall}
-                    size="lg"
-                    className="flex-1"
-                    disabled={!permissionsGranted || isLoading}
-                  >
-                    {isCreating ? 'Oda Oluştur ve Bekle' : 'Görüşmeye Katıl'}
-                    <ArrowRight className="ml-2 h-5 w-5" />
-                  </Button>
-                  <Button
-                    onClick={handleShare}
-                    size="lg"
-                    variant="outline"
-                    className="px-4"
-                    title="Bağlantıyı Paylaş"
-                  >
-                    <Share2 className="h-5 w-5" />
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
+            {/* Floating Action Bar for Mobile & Regular Card for Desktop */}
+            <div className="fixed bottom-0 left-0 right-0 z-50 border-t bg-background/80 p-4 backdrop-blur-lg lg:relative lg:border-none lg:bg-transparent lg:p-0 lg:backdrop-blur-none transition-all animate-in slide-in-from-bottom-full duration-500">
+              <Card className="border-primary/20 bg-primary/5 shadow-2xl lg:shadow-inner">
+                <CardHeader className="hidden pb-2 lg:block">
+                  <CardTitle className="text-lg flex items-center gap-2">
+                    <div className="h-2 w-2 animate-pulse rounded-full bg-primary" />
+                    {isCreating ? 'Oda Hazır' : 'Bağlanmaya Hazırsınız'}
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="p-2 sm:p-4 lg:p-6">
+                  <div className="flex gap-2 sm:gap-3">
+                    <Button
+                      onClick={handleJoinCall}
+                      size="lg"
+                      className="flex-1 h-12 sm:h-14 text-base sm:text-lg font-bold shadow-lg"
+                      disabled={!permissionsGranted || isLoading}
+                    >
+                      {isCreating ? 'Odayı Başlat' : 'Görüşmeye Katıl'}
+                      <ArrowRight className="ml-2 h-5 w-5" />
+                    </Button>
+                    <Button
+                      onClick={handleShare}
+                      size="lg"
+                      variant="outline"
+                      className="h-12 w-12 sm:h-14 sm:w-14 p-0 shadow-md"
+                      title="Bağlantıyı Paylaş"
+                    >
+                      <Share2 className="h-5 w-5" />
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
           </div>
         </div>
       </div>
