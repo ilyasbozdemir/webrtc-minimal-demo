@@ -191,8 +191,6 @@ function CallPageContent() {
         }
       }
 
-      const isPolite = !isCreating // Joiner is polite, creator is impolite
-
       signaling.onMessage(async (message: SignalingMessage) => {
         if (!mounted) return
 
@@ -205,10 +203,18 @@ function CallPageContent() {
           return
         }
 
-        console.log('Processing message:', message.type, 'from:', message.from, 'state:', pc.signalingState)
+        console.log('Processing message:', message.type, 'from:', message.from)
         processedMessagesRef.current.add(messageKey)
 
         try {
+          if (message.type === 'peer-joined' && isCreating && pc.iceConnectionState !== 'connected') {
+            console.log('Creator: Peer joined, re-starting negotiation (Handshake)')
+            const offer = await pc.createOffer({ iceRestart: true })
+            await pc.setLocalDescription(offer)
+            signaling?.sendOffer(pc.localDescription!)
+            return
+          }
+
           if (message.type === 'ice-candidate') {
             if (message.candidate) {
               if (pc.remoteDescription) {
@@ -279,13 +285,16 @@ function CallPageContent() {
             const offer = await pc.createOffer()
             await pc.setLocalDescription(offer)
             signaling?.sendOffer(pc.localDescription!)
-            console.log('Creator: offer sent')
           } catch (err) {
             console.error('Error during negotiation:', err)
           }
         }
       }
 
+      // Handshake initiate
+      setTimeout(() => {
+        if (mounted) signaling?.sendJoin()
+      }, 1500)
     }
 
     initializeConnection()
@@ -294,12 +303,8 @@ function CallPageContent() {
       mounted = false
       console.log('Cleaning up connection')
       processedMessagesRef.current.clear()
-      if (signaling) {
-        signaling.close()
-      }
-      if (peerConnection) {
-        peerConnection.close()
-      }
+      if (signaling) signaling.close()
+      if (peerConnection) peerConnection.close()
     }
   }, [localStream, roomId, isCreating, userId])
 
@@ -320,12 +325,8 @@ function CallPageContent() {
   }
 
   const handleEndCall = () => {
-    if (peerConnectionRef.current) {
-      peerConnectionRef.current.close()
-    }
-    if (localStream) {
-      localStream.getTracks().forEach((track) => track.stop())
-    }
+    if (peerConnectionRef.current) peerConnectionRef.current.close()
+    if (localStream) localStream.getTracks().forEach((track) => track.stop())
     router.push('/')
   }
 

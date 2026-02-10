@@ -87,7 +87,11 @@ export class SupabaseSignaling {
     this.send('ice-candidate', { candidate })
   }
 
-  private async send(type: 'offer' | 'answer' | 'ice-candidate', data: any): Promise<void> {
+  sendJoin(): void {
+    this.send('peer-joined', {})
+  }
+
+  private async send(type: 'offer' | 'answer' | 'ice-candidate' | 'peer-joined', data: any): Promise<void> {
     if (!this.isSubscribed) {
       console.log('SupabaseSignaling: Not subscribed yet, queuing message:', type)
       this.pendingMessages.push({ type, data })

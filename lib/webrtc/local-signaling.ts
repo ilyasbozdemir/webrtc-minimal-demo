@@ -2,7 +2,7 @@
 // In production, replace with a WebSocket signaling server
 
 export interface SignalingMessage {
-  type: 'offer' | 'answer' | 'ice-candidate'
+  type: 'offer' | 'answer' | 'ice-candidate' | 'peer-joined'
   roomId: string
   from: string
   offer?: RTCSessionDescriptionInit
