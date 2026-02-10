@@ -19,7 +19,7 @@ import { ConnectionState, CallState } from '@/lib/types/webrtc'
 import { formatRoomId } from '@/lib/utils/room'
 import { useChat } from '@/hooks/use-chat'
 import { useConnectionQuality } from '@/hooks/use-connection-quality'
-import { AlertCircle, Copy, Check, BarChart3, X } from 'lucide-react'
+import { AlertCircle, Copy, Check, BarChart3, X, Share2 } from 'lucide-react'
 
 function CallPageContent() {
   const router = useRouter()
@@ -337,6 +337,31 @@ function CallPageContent() {
     }, 2000)
   }
 
+  const handleShare = async () => {
+    const url = `${window.location.origin}/setup?roomId=${roomId}`
+    const text = `Görüntülü görüşme odasına katıl: ${formatRoomId(roomId)}`
+
+    if (navigator.share) {
+      try {
+        await navigator.share({
+          title: 'Video Görüşme Daveti',
+          text: text,
+          url: url,
+        })
+      } catch (err) {
+        console.log('Share failed:', err)
+      }
+    } else {
+      // Fallback: Copy to clipboard and show toast or alert
+      await navigator.clipboard.writeText(url)
+      setCopied(true)
+      setTimeout(() => setCopied(false), 2000)
+      // Custom WhatsApp link as fallback if share API is not available
+      const waUrl = `https://wa.me/?text=${encodeURIComponent(text + ' ' + url)}`
+      window.open(waUrl, '_blank')
+    }
+  }
+
   const handleCopyRoomId = async () => {
     await navigator.clipboard.writeText(roomId)
     setCopied(true)
@@ -375,6 +400,15 @@ function CallPageContent() {
             >
               <BarChart3 className="mr-2 h-4 w-4" />
               İstatistikler
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleShare}
+              className="flex items-center gap-2"
+            >
+              <Share2 className="h-4 w-4" />
+              <span className="hidden sm:inline">Paylaş</span>
             </Button>
             <ConnectionStatusBadge state={connectionState} />
           </div>

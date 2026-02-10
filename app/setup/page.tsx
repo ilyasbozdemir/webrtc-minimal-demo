@@ -12,7 +12,7 @@ import { PermissionRequest } from '@/components/permission-request'
 import { MediaDeviceManager } from '@/lib/webrtc/media-devices'
 import { VideoQuality, VIDEO_QUALITY_PRESETS } from '@/lib/webrtc/config'
 import { formatRoomId } from '@/lib/utils/room'
-import { Video, Settings, AlertCircle, ArrowRight, ArrowLeft } from 'lucide-react'
+import { Video, Settings, AlertCircle, ArrowRight, ArrowLeft, Share2 } from 'lucide-react'
 
 function SetupPageContent() {
   const router = useRouter()
@@ -31,6 +31,7 @@ function SetupPageContent() {
   const [error, setError] = useState('')
   const [isLoading, setIsLoading] = useState(false)
   const [permissionsGranted, setPermissionsGranted] = useState(false)
+  const [isCopied, setIsCopied] = useState(false)
 
   // Check WebRTC support
   useEffect(() => {
@@ -117,6 +118,29 @@ function SetupPageContent() {
 
   const handlePermissionsDenied = () => {
     setPermissionsGranted(false)
+  }
+
+  const handleShare = async () => {
+    const url = `${window.location.origin}/setup?roomId=${roomId}`
+    const text = `Görüntülü görüşme odasına katıl: ${formatRoomId(roomId)}`
+
+    if (navigator.share) {
+      try {
+        await navigator.share({
+          title: 'Video Görüşme Daveti',
+          text: text,
+          url: url,
+        })
+      } catch (err) {
+        console.log('Share failed:', err)
+      }
+    } else {
+      await navigator.clipboard.writeText(url)
+      setIsCopied(true)
+      setTimeout(() => setIsCopied(false), 2000)
+      const waUrl = `https://wa.me/?text=${encodeURIComponent(text + ' ' + url)}`
+      window.open(waUrl, '_blank')
+    }
   }
 
   const handleJoinCall = async () => {
@@ -290,15 +314,26 @@ function SetupPageContent() {
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                <Button
-                  onClick={handleJoinCall}
-                  size="lg"
-                  className="w-full"
-                  disabled={!permissionsGranted || isLoading}
-                >
-                  {isCreating ? 'Oda Oluştur ve Bekle' : 'Görüşmeye Katıl'}
-                  <ArrowRight className="ml-2 h-5 w-5" />
-                </Button>
+                <div className="flex gap-2">
+                  <Button
+                    onClick={handleJoinCall}
+                    size="lg"
+                    className="flex-1"
+                    disabled={!permissionsGranted || isLoading}
+                  >
+                    {isCreating ? 'Oda Oluştur ve Bekle' : 'Görüşmeye Katıl'}
+                    <ArrowRight className="ml-2 h-5 w-5" />
+                  </Button>
+                  <Button
+                    onClick={handleShare}
+                    size="lg"
+                    variant="outline"
+                    className="px-4"
+                    title="Bağlantıyı Paylaş"
+                  >
+                    <Share2 className="h-5 w-5" />
+                  </Button>
+                </div>
               </CardContent>
             </Card>
           </div>
