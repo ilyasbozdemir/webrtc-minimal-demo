@@ -19,7 +19,7 @@ import { ConnectionState, CallState } from '@/lib/types/webrtc'
 import { formatRoomId } from '@/lib/utils/room'
 import { useChat } from '@/hooks/use-chat'
 import { useConnectionQuality } from '@/hooks/use-connection-quality'
-import { AlertCircle, Copy, Check, BarChart3, X, Share2, Video } from 'lucide-react'
+import { AlertCircle, Copy, Check, BarChart3, X, Share2, Video, Users } from 'lucide-react'
 
 function CallPageContent() {
   const router = useRouter()
@@ -62,6 +62,7 @@ function CallPageContent() {
   const [isChatOpen, setIsChatOpen] = useState(false)
   const [showQualityStats, setShowQualityStats] = useState(false)
   const [dataChannel, setDataChannel] = useState<RTCDataChannel | null>(null)
+  const [isPeerOnline, setIsPeerOnline] = useState(false)
 
   const peerConnectionRef = useRef<WebRTCPeerConnection | null>(null)
   const signalingRef = useRef<SupabaseSignaling | null>(null)
@@ -210,6 +211,8 @@ function CallPageContent() {
       // Presence tabanlı anlık bağlantı: Karşı taraf online olduğu an el sıkışmayı başlat
       signaling.onPeerStatus((isOnline) => {
         if (!mounted) return
+        setIsPeerOnline(isOnline)
+
         if (isOnline && isCreating && pc.iceConnectionState !== 'connected') {
           console.log('Presence: Peer detected online, triggering handshake')
           pc.onnegotiationneeded?.(new Event('negotiationneeded'))
@@ -415,9 +418,16 @@ function CallPageContent() {
               <Video className="h-4 w-4" />
             </div>
             <div>
-              <h1 className="text-sm font-medium leading-none sm:text-base">
-                {connectionState === 'connected' ? 'Görüşme Yayında' : 'Bağlantı Kuruluyor'}
-              </h1>
+              <div className="flex items-center gap-2">
+                <h1 className="text-sm font-medium leading-none sm:text-base">
+                  {connectionState === 'connected' ? 'Görüşme Yayında' : 'Bağlantı Kuruluyor'}
+                </h1>
+                {isCreating && (
+                  <span className="rounded-full bg-primary/20 px-1.5 py-0.5 text-[10px] font-semibold text-primary">
+                    Host
+                  </span>
+                )}
+              </div>
               <button
                 onClick={handleCopyRoomId}
                 className="mt-1 flex items-center gap-1 text-[10px] text-muted-foreground hover:text-foreground transition-colors sm:text-xs"
@@ -470,29 +480,46 @@ function CallPageContent() {
 
           {connectionState !== 'connected' && !remoteStream && (
             <div className="absolute inset-0 z-20 flex items-center justify-center bg-background/60 backdrop-blur-sm">
-              <div className="text-center p-6 bg-card border rounded-2xl shadow-xl max-w-sm animate-in zoom-in-95">
-                <div className="mb-4 flex justify-center">
-                  <div className="relative h-12 w-12">
-                    <div className="absolute inset-0 animate-ping rounded-full bg-primary/20" />
-                    <div className="relative flex h-12 w-12 items-center justify-center rounded-full bg-primary/10 text-primary">
-                      <Video className="h-6 w-6" />
+              <div className="text-center p-8 bg-card border rounded-3xl shadow-2xl max-w-sm animate-in zoom-in-95 duration-300">
+                <div className="mb-6 flex justify-center">
+                  <div className="relative">
+                    <div className={`absolute inset-0 animate-ping rounded-full ${isPeerOnline ? 'bg-emerald-500/20' : 'bg-primary/20'}`} />
+                    <div className={`relative flex h-16 w-16 items-center justify-center rounded-full border-2 border-dashed ${isPeerOnline ? 'border-emerald-500 bg-emerald-50 text-emerald-600' : 'border-primary bg-primary/5 text-primary'}`}>
+                      {isPeerOnline ? <Users className="h-8 w-8" /> : <Video className="h-8 w-8" />}
                     </div>
                   </div>
                 </div>
-                <h3 className="mb-2 font-semibold">
-                  {isCreating ? 'Oda Hazırlanıyor' : 'Bağlantı Bekleniyor'}
+
+                <h3 className="mb-2 text-xl font-bold">
+                  {isPeerOnline ? 'Katılımcı Geldi!' : (isCreating ? 'Oda Hazır' : 'Bağlantı Bekleniyor')}
                 </h3>
-                <p className="text-sm text-muted-foreground">
-                  {isCreating
-                    ? 'Oda ID\'nizi paylaşın ve katılımcının gelmesini bekleyin.'
-                    : 'Sunucuya bağlanılıyor, lütfen bekleyin...'}
+
+                <p className="text-sm text-muted-foreground leading-relaxed">
+                  {isPeerOnline
+                    ? 'Diğer kullanıcı odaya girdi, şu an bağlantı kuruluyor. Lütfen bekleyin...'
+                    : (isCreating
+                      ? 'Oda ID\'nizi paylaşın ve katılımcının odaya girmesini bekleyin.'
+                      : 'Oda sahibine bağlanılmaya çalışılıyor...')}
                 </p>
-                <div className="mt-6">
-                  <Button variant="outline" size="sm" onClick={handleShare} className="gap-2">
-                    <Share2 className="h-4 w-4" />
-                    Linki Paylaş
-                  </Button>
-                </div>
+
+                {!isPeerOnline && isCreating && (
+                  <div className="mt-8 pt-6 border-t flex flex-col gap-3">
+                    <div className="flex items-center justify-center gap-2 rounded-lg bg-muted p-2 font-mono text-sm">
+                      {formatRoomId(roomId)}
+                    </div>
+                    <Button variant="default" size="sm" onClick={handleShare} className="gap-2 w-full">
+                      <Share2 className="h-4 w-4" />
+                      Davet Linkini Paylaş
+                    </Button>
+                  </div>
+                )}
+
+                {isPeerOnline && (
+                  <div className="mt-6 flex items-center justify-center gap-2 text-xs text-emerald-600 font-medium">
+                    <div className="h-1.5 w-1.5 animate-pulse rounded-full bg-emerald-500" />
+                    Sinyal Bekleniyor...
+                  </div>
+                )}
               </div>
             </div>
           )}
