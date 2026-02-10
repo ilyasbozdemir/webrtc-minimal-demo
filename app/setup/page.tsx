@@ -166,8 +166,8 @@ function SetupPageContent() {
 
   const handleJoinCall = async () => {
     if (!user) {
-      setError('Görüşmeye katılmak için önce giriş yapmalısınız.')
-      toast.error('Giriş yapmanız gerekiyor')
+      setError('Görüşmeye katılmak için önce bir isim belirlemelisiniz.')
+      window.dispatchEvent(new Event('open-auth-modal'))
       return
     }
 

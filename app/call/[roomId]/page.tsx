@@ -241,6 +241,22 @@ function CallPageContent() {
         }
       }
 
+      pc.onnegotiationneeded = async () => {
+        if (!isCreating || pc.iceConnectionState === 'connected') return
+        try {
+          if (makingOfferRef.current) return
+          makingOfferRef.current = true
+          console.log('Negotiation needed: creating offer')
+          const offer = await pc.createOffer()
+          await pc.setLocalDescription(offer)
+          signaling?.sendOffer(pc.localDescription!)
+        } catch (err) {
+          console.error('Negotiation failed:', err)
+        } finally {
+          makingOfferRef.current = false
+        }
+      }
+
       // Presence tabanlı anlık bağlantı: Karşı taraf online olduğu an el sıkışmayı başlat
       signaling.onPeerStatus((isOnline) => {
         if (!mounted) return
@@ -530,15 +546,20 @@ function CallPageContent() {
                 </div>
 
                 <h3 className="mb-2 text-xl font-bold">
-                  {isPeerOnline ? 'Katılımcı Geldi!' : (isCreating ? 'Oda Hazır' : 'Bağlantı Bekleniyor')}
+                  {connectionState === 'connected' ? 'Görüşme Başladı' :
+                    (connectionState === 'connecting' || isPeerOnline) ? (isCreating ? 'Katılımcı Geldi, Bağlanılıyor...' : 'Yöneticiye Bağlanılıyor...') :
+                      (isCreating ? 'Oda Hazır' : 'Bağlantı Bekleniyor')}
                 </h3>
 
                 <p className="text-sm text-muted-foreground leading-relaxed">
-                  {isPeerOnline
-                    ? 'Diğer kullanıcı odaya girdi, şu an bağlantı kuruluyor. Lütfen bekleyin...'
-                    : (isCreating
-                      ? 'Oda ID\'nizi paylaşın ve katılımcının odaya girmesini bekleyin.'
-                      : 'Oda sahibine bağlanılmaya çalışılıyor...')}
+                  {connectionState === 'connected' ? 'Güvenli bağlantı sağlandı. İyi görüşmeler!' :
+                    (connectionState === 'connecting' || isPeerOnline)
+                      ? (isCreating
+                        ? 'Misafir odaya giriş yaptı. Görüntü ve ses senkronize ediliyor.'
+                        : 'Yönetici ile el sıkışılıyor. Görüntü aktarımı bekleniyor...')
+                      : (isCreating
+                        ? 'Oda linkinizi paylaşın ve katılımcının gelmesini bekleyin.'
+                        : 'Oda sahibi henüz burada değil. Lütfen gelmesini bekleyin.')}
                 </p>
 
                 {!isPeerOnline && isCreating && (
