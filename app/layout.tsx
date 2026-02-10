@@ -1,13 +1,14 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import { Analytics } from "@vercel/analytics/next";
+import { Toaster } from "sonner";
 import "./globals.css";
 
 const _geist = Geist({ subsets: ["latin"] });
 const _geistMono = Geist_Mono({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: "WebRTC Call - Modern Video Conferencing",
+  title: "WebRTC Meet - Modern Video Conferencing",
   description: "WebRTC tabanlı modern video görüşme uygulaması",
   generator: "ilyasbozdemir.dev",
 };
@@ -21,6 +22,7 @@ export default function RootLayout({
     <html lang="tr">
       <body className={`font-sans antialiased`}>
         {children}
+        <Toaster richColors position="top-center" />
         <Analytics />
       </body>
     </html>

@@ -6,8 +6,9 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Video, Users, MessageSquare, Activity, ArrowRight, AlertCircle } from 'lucide-react'
+import { Video, Users, MessageSquare, Activity, ArrowRight, AlertCircle, ShieldCheck } from 'lucide-react'
 import { generateRoomId, parseRoomId, isValidRoomId } from '@/lib/utils/room'
+import { AuthModal } from '@/components/auth-modal'
 
 export default function LandingPage() {
   const router = useRouter()
@@ -33,6 +34,19 @@ export default function LandingPage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-background to-accent/5">
+      {/* Navbar with Auth */}
+      <nav className="sticky top-0 z-50 border-b bg-background/80 backdrop-blur-lg">
+        <div className="container mx-auto flex h-16 items-center justify-between px-4">
+          <div className="flex items-center gap-2">
+            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary text-primary-foreground">
+              <Video className="h-5 w-5" />
+            </div>
+            <span className="text-xl font-bold tracking-tight">WebRTC <span className="text-primary">Meet</span></span>
+          </div>
+          <AuthModal />
+        </div>
+      </nav>
+
       <div className="container mx-auto px-4 py-8 sm:py-12 lg:py-16">
         {/* Header */}
         <div className="mb-12 text-center lg:mb-16">

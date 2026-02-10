@@ -19,7 +19,7 @@ import { ConnectionState, CallState } from '@/lib/types/webrtc'
 import { formatRoomId } from '@/lib/utils/room'
 import { useChat } from '@/hooks/use-chat'
 import { useConnectionQuality } from '@/hooks/use-connection-quality'
-import { AlertCircle, Copy, Check, BarChart3, X, Share2, Video, Users } from 'lucide-react'
+import { AlertCircle, Copy, Check, BarChart3, X, Share2, Video, Users, ShieldCheck } from 'lucide-react'
 
 function CallPageContent() {
   const router = useRouter()
@@ -28,6 +28,7 @@ function CallPageContent() {
 
   const roomId = params.roomId as string
   const [userId] = useState(() => `user_${Math.random().toString(36).substring(2, 11)}`)
+  const [userName, setUserName] = useState('Misafir')
   const [isCreating, setIsCreating] = useState(false)
   const [devices, setDevices] = useState({ audio: '', video: '', quality: '720p' as VideoQuality })
 
@@ -37,9 +38,11 @@ function CallPageContent() {
     const audio = searchParams.get('audioDevice') || ''
     const video = searchParams.get('videoDevice') || ''
     const q = (searchParams.get('quality') as VideoQuality) || '720p'
+    const name = searchParams.get('userName') || 'Misafir'
 
     setIsCreating(create)
     setDevices({ audio, video, quality: q })
+    setUserName(name)
 
     // URL'deki teknik parametreleri gizle (daha modern görünüm)
     if (searchParams.has('create') || searchParams.has('audioDevice')) {
@@ -422,11 +425,17 @@ function CallPageContent() {
                 <h1 className="text-sm font-medium leading-none sm:text-base">
                   {connectionState === 'connected' ? 'Görüşme Yayında' : 'Bağlantı Kuruluyor'}
                 </h1>
-                {isCreating && (
-                  <span className="rounded-full bg-primary/20 px-1.5 py-0.5 text-[10px] font-semibold text-primary">
-                    Host
+                <div className="flex items-center gap-1.5">
+                  <span className="text-xs text-muted-foreground font-medium bg-muted px-2 py-0.5 rounded-full">
+                    {userName}
                   </span>
-                )}
+                  {isCreating && (
+                    <span className="flex items-center gap-1 rounded-full bg-primary/20 px-2 py-0.5 text-[10px] font-bold text-primary animate-in fade-in zoom-in duration-500">
+                      <ShieldCheck className="h-2.5 w-2.5" />
+                      YÖNETİCİ
+                    </span>
+                  )}
+                </div>
               </div>
               <button
                 onClick={handleCopyRoomId}

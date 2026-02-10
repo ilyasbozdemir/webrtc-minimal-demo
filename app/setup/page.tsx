@@ -12,8 +12,9 @@ import { PermissionRequest } from '@/components/permission-request'
 import { MediaDeviceManager } from '@/lib/webrtc/media-devices'
 import { VideoQuality, VIDEO_QUALITY_PRESETS } from '@/lib/webrtc/config'
 import { formatRoomId } from '@/lib/utils/room'
-import { Video, Settings, AlertCircle, ArrowRight, ArrowLeft, Share2, Mic, MicOff } from 'lucide-react'
+import { Video, Settings, AlertCircle, ArrowRight, ArrowLeft, Share2, Mic, MicOff, User } from 'lucide-react'
 import { useAudioLevel } from '@/hooks/use-audio-level'
+import { supabase } from '@/lib/supabase'
 
 function SetupPageContent() {
   const router = useRouter()
@@ -33,7 +34,13 @@ function SetupPageContent() {
   const [isLoading, setIsLoading] = useState(false)
   const [permissionsGranted, setPermissionsGranted] = useState(false)
   const [isCopied, setIsCopied] = useState(false)
+  const [user, setUser] = useState<any>(null)
   const audioLevel = useAudioLevel(stream)
+
+  // Get user profile
+  useEffect(() => {
+    supabase.auth.getUser().then(({ data: { user } }) => setUser(user))
+  }, [])
 
   // Check WebRTC support
   useEffect(() => {
@@ -171,6 +178,7 @@ function SetupPageContent() {
       videoDevice: selectedVideoDevice,
       quality: selectedQuality,
       create: isCreating.toString(),
+      userName: user?.email ? user.email.split('@')[0] : 'Misafir',
     })
 
     router.push(`/call/${roomId}?${params.toString()}`)
