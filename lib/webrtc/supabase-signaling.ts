@@ -6,9 +6,10 @@ export class SupabaseSignaling {
   private userId: string
   private channel: any
   private onMessageCallback: ((message: SignalingMessage) => void) | null = null
-
+  private onPeerStatusCallback: ((online: boolean) => void) | null = null
   private isSubscribed = false
   private pendingMessages: any[] = []
+  private onlinePeers: Set<string> = new Set()
 
   constructor(roomId: string, userId: string) {
     this.roomId = roomId
@@ -21,12 +22,11 @@ export class SupabaseSignaling {
       },
     })
 
+    this.attachListeners()
     console.log('SupabaseSignaling initialized for room:', roomId, 'user:', userId)
   }
 
-  onMessage(callback: (message: SignalingMessage) => void): void {
-    this.onMessageCallback = callback
-
+  private attachListeners() {
     this.channel
       .on('broadcast', { event: 'signal' }, ({ payload }: { payload: SignalingMessage }) => {
         console.log('SupabaseSignaling: Received broadcast signal:', payload.type, 'from:', payload.from)
@@ -36,29 +36,52 @@ export class SupabaseSignaling {
       })
       .on('presence', { event: 'sync' }, () => {
         const state = this.channel.presenceState()
-        console.log('SupabaseSignaling: Presence state synced:', state)
+        const peerIds = Object.keys(state).filter(id => id !== this.userId)
+        const isPeerOnline = peerIds.length > 0
+        
+        console.log('SupabaseSignaling: Presence sync. Peers online:', peerIds)
+        this.onPeerStatusCallback?.(isPeerOnline)
+        
+        if (isPeerOnline) {
+          this.sendJoin()
+        }
+      })
+      .on('presence', { event: 'join' }, ({ key }: { key: string }) => {
+        if (key !== this.userId) {
+          console.log('SupabaseSignaling: Peer joined via presence:', key)
+          this.onPeerStatusCallback?.(true)
+          this.sendJoin()
+        }
+      })
+      .on('presence', { event: 'leave' }, ({ key }: { key: string }) => {
+        if (key !== this.userId) {
+          console.log('SupabaseSignaling: Peer left via presence:', key)
+          this.onPeerStatusCallback?.(false)
+        }
       })
       .subscribe(async (status: string) => {
         console.log('SupabaseSignaling: Channel status:', status)
         if (status === 'SUBSCRIBED') {
           this.isSubscribed = true
-          
-          // Katılımcıyı DB'ye kaydet
           await this.registerParticipant()
-          
-          // Track presence
           await this.channel.track({
             online_at: new Date().toISOString(),
             user_id: this.userId,
           })
-
-          // Bekleyen mesajları gönder
           while (this.pendingMessages.length > 0) {
             const msg = this.pendingMessages.shift()
             this.send(msg.type, msg.data)
           }
         }
       })
+  }
+
+  onMessage(callback: (message: SignalingMessage) => void): void {
+    this.onMessageCallback = callback
+  }
+
+  onPeerStatus(callback: (online: boolean) => void): void {
+    this.onPeerStatusCallback = callback
   }
 
   private async registerParticipant() {

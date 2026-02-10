@@ -191,8 +191,29 @@ function CallPageContent() {
         }
       }
 
+      // Presence tabanlı anlık bağlantı: Karşı taraf online olduğu an el sıkışmayı başlat
+      signaling.onPeerStatus((isOnline) => {
+        if (!mounted) return
+        if (isOnline && isCreating && pc.iceConnectionState !== 'connected') {
+          console.log('Presence: Peer detected online, triggering handshake')
+          pc.onnegotiationneeded?.(new Event('negotiationneeded'))
+        }
+      })
+
       signaling.onMessage(async (message: SignalingMessage) => {
         if (!mounted) return
+
+        if (message.type === 'peer-joined' && isCreating && pc.iceConnectionState !== 'connected') {
+          console.log('Creator: Peer joined via signaling, starting handshake')
+          try {
+            const offer = await pc.createOffer({ iceRestart: true })
+            await pc.setLocalDescription(offer)
+            signaling?.sendOffer(pc.localDescription!)
+          } catch (err) {
+            console.error('Handshake failed:', err)
+          }
+          return
+        }
 
         const messageKey = `${message.from}-${message.type}-${message.id}`
         if (processedMessagesRef.current.has(messageKey)) {
